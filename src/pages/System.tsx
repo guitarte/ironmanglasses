@@ -9,6 +9,7 @@ type Props = {
   geo: Geo;
   alertCount: number;
   dataState: DataState;
+  display: string;
   onSound: () => void;
   onLocation: () => void;
   onClearAlerts: () => void;
@@ -62,7 +63,7 @@ export function System(props: Props) {
       <p className="diag">
         {`GPS ${settings.location ? GEO_LABEL[geo.state] : 'OFF'}`}
         {geo.state === 'ok' && geo.accuracy !== null ? ` ${Math.round(geo.accuracy * 3.28084)} FT` : ''}
-        {`  /  DATA ${props.dataState === 'ok' ? 'LIVE' : props.dataState.toUpperCase()}  /  REFRESH 30 S`}
+        {`  /  DATA ${props.dataState === 'ok' ? 'LIVE' : props.dataState.toUpperCase()}  /  REFRESH 30 S  /  ${props.display.toUpperCase()}`}
       </p>
       <p className="credit">Wait times by ThemeParks.wiki. Unofficial fan project.</p>
     </div>

@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {bestMoves, planRoute} from './advisor';
 import {cachedLive, fetchLive, loadParks, type LiveSet, type Park} from './api';
+import {PANE, useDisplay, useTouchPad} from './display';
 import {clearHistory, recordHistory} from './history';
 import {buildRows, landsPresent, originFor, parkStats, sortRows, SORTS, type Row, type Sort} from './model';
 import {Mission, MISSION_PAGE} from './pages/Mission';
@@ -38,6 +39,8 @@ function useWindow(index: number, size: number, length: number): number {
 
 export default function App() {
   const visible = useVisible();
+  const display = useDisplay();
+  useTouchPad(display.touch);
   const [parks, setParks] = useState<Park[] | null>(null);
   const [parksFailed, setParksFailed] = useState(false);
   const [parkIndex, setParkIndex] = useState(() => load('park', 0));
@@ -73,7 +76,7 @@ export default function App() {
   const parkLive = (park && live[park.id]) || EMPTY;
 
   const geo = useGeo(visible && settings.location);
-  const compass = useCompass(visible && (targetId !== null || page === 'radar'));
+  const compass = useCompass(visible && (targetId !== null || page === 'radar' || display.dual));
   const course = geo.speed !== null && geo.speed > 0.7 ? geo.course : null;
   const heading = compass ?? course;
 
@@ -371,6 +374,10 @@ export default function App() {
         if (event.key === 'Escape') {
           event.preventDefault();
           history.back();
+        } else if (display.touch && event.key === 'ArrowLeft' && !event.isTrusted) {
+          // A rightward swipe on a phone, which has no system Back gesture inside a web app.
+          event.preventDefault();
+          history.back();
         } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
           event.preventDefault();
           setTargetCursor(value => Math.min(TARGET_ACTIONS - 1, value + 1));
@@ -404,7 +411,7 @@ export default function App() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [booting, targetId, page, cursor, selected, blips.length, setCursor, goPage]);
+  }, [booting, targetId, page, cursor, selected, blips.length, setCursor, goPage, display.touch]);
 
   // Focus follows the cursor, including on return from the target view.
   useEffect(() => {
@@ -448,8 +455,11 @@ export default function App() {
   const boot = booting ? <Boot onDone={() => setBooting(false)} /> : null;
   const overlay = banner ? <Banner banner={banner} /> : null;
 
+  let primary;
+  let body;
+  let footer = '';
   if (target && park) {
-    return (
+    primary = (
       <>
         <TargetScreen
           park={park}
@@ -471,14 +481,17 @@ export default function App() {
           onAlert={() => cycleAlert(target)}
           onRescan={refresh}
         />
+        {display.touch ? (
+          <button type="button" className="phone-back" onClick={() => history.back()}>
+            ◂ BACK
+          </button>
+        ) : null}
         {overlay}
       </>
     );
-  }
+  } else {
 
   const common = {cursor, onFocusCursor: setCursor};
-  let body;
-  let footer = '';
   if (page === 'system') {
     body = (
       <System
@@ -487,6 +500,7 @@ export default function App() {
         geo={geo}
         alertCount={Object.keys(alerts).length}
         dataState={dataState}
+        display={display.mode}
         onSound={() => {
           setSettings(current => ({...current, sound: !current.sound}));
           if (!settings.sound) {
@@ -589,7 +603,7 @@ export default function App() {
         ? {start: selected / blips.length, size: 1 / blips.length}
         : null;
 
-  return (
+  primary = (
     <>
       <main className="hud" data-testid={`page-${page}`}>
         <Header
@@ -603,6 +617,7 @@ export default function App() {
           now={now}
           onFocus={() => setCursor(0)}
           onSwitch={() => switchPark()}
+          onSelect={display.touch ? showPage : undefined}
         />
         <div key={page} className={`page ${direction > 0 ? 'from-right' : 'from-left'}`}>
           {body}
@@ -612,5 +627,58 @@ export default function App() {
       {overlay}
       {boot}
     </>
+  );
+  }
+
+  if (display.mode === 'glasses') return primary;
+
+  // Second pane: the radar rides along with whatever the main pane shows, and the
+  // overview takes its place while the main pane is the radar itself.
+  let companion = null;
+  if (display.dual && dataState === 'ok') {
+    const showRadar = target !== null || page !== 'radar';
+    const tracked = target ? blips.findIndex(row => row.id === target.id) : -1;
+    companion = (
+      <main className="hud companion">
+        <header className="top">
+          <p className="eyebrow">{`LINKED DISPLAY  /  ${showRadar ? (tracked >= 0 ? 'TRACKING' : 'RADAR') : 'OVERVIEW'}`}</p>
+        </header>
+        <div key={showRadar ? 'radar' : 'overview'} className="page from-right">
+          {showRadar ? (
+            <Radar
+              cursor={-1}
+              onFocusCursor={() => {}}
+              blips={blips}
+              selected={tracked >= 0 ? tracked : selected}
+              heading={origin?.remote ? null : heading}
+              remote={origin?.remote ?? true}
+              onLock={lockTarget}
+            />
+          ) : (
+            <Overview cursor={-1} onFocusCursor={() => {}} stats={stats!} moves={moves} remote={origin?.remote ?? true} onLock={lockTarget} />
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  const size = PANE * display.scale;
+  const slot = {width: size, height: size};
+  const pane = {transform: `scale(${display.scale})`};
+  return (
+    <div className={`stage ${display.vertical ? 'is-vertical' : ''}`}>
+      <div className="slot" style={slot}>
+        <div className="pane" style={pane}>
+          {primary}
+        </div>
+      </div>
+      {companion ? (
+        <div className="slot" style={slot}>
+          <div className="pane" style={pane} inert>
+            {companion}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

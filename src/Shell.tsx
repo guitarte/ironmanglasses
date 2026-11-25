@@ -18,9 +18,11 @@ type HeaderProps = {
   now: number;
   onFocus: () => void;
   onSwitch: () => void;
+  /** Set on touch screens, where the view tabs can be tapped. */
+  onSelect?: (page: PageId) => void;
 };
 
-export function Header({page, parks, park, loading, failed, fetchedAt, now, onFocus, onSwitch}: HeaderProps) {
+export function Header({page, parks, park, loading, failed, fetchedAt, now, onFocus, onSwitch, onSelect}: HeaderProps) {
   const status = failed
     ? fetchedAt
       ? `LINK LOST  /  ${ageLabel(fetchedAt, now, true)}`
@@ -33,7 +35,12 @@ export function Header({page, parks, park, loading, failed, fetchedAt, now, onFo
     <header className="top">
       <nav className="tabs" aria-label="Views">
         {PAGES.map(id => (
-          <span key={id} className={id === page ? 'on' : ''} aria-current={id === page ? 'page' : undefined}>
+          <span
+            key={id}
+            className={id === page ? 'on' : ''}
+            aria-current={id === page ? 'page' : undefined}
+            onClick={onSelect ? () => onSelect(id) : undefined}
+          >
             {id}
           </span>
         ))}
