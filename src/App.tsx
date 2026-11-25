@@ -17,6 +17,7 @@ import {
   type Show,
   type Sort,
 } from './model';
+import {Holo} from './pages/Holo';
 import {Mission, MISSION_PAGE} from './pages/Mission';
 import {Overview} from './pages/Overview';
 import {Radar} from './pages/Radar';
@@ -38,7 +39,9 @@ const PAN_STEP = 30;
 
 type LiveState = {set: LiveSet | null; loading: boolean; failed: boolean};
 const EMPTY: LiveState = {set: null, loading: true, failed: false};
-type Settings = {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string};
+type Settings = {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string; flat?: boolean};
+/** How the incoming screen arrives: from a side, back out of a target lock, or flipped to another park. */
+type Arrival = 'right' | 'left' | 'back' | 'flip';
 export type AlertRule = number | 'open';
 
 /** Keeps a fixed-size window of a list scrolled so that `index` stays inside it. */
@@ -69,8 +72,9 @@ export default function App() {
     const stored = load<PageId>('page', 'overview');
     return PAGES.includes(stored) ? stored : 'overview';
   });
-  const [direction, setDirection] = useState(1);
-  const [cursors, setCursors] = useState<Record<PageId, number>>({overview: 0, scan: 0, radar: 0, sight: 0, shows: 0, mission: 0, system: 0});
+  const [arrival, setArrival] = useState<Arrival>('right');
+  const [entering, setEntering] = useState(true);
+  const [cursors, setCursors] = useState<Record<PageId, number>>({overview: 0, scan: 0, radar: 0, map: 0, sight: 0, shows: 0, mission: 0, system: 0});
   const [sort, setSort] = useState<Sort>('wait');
   const [landByPark, setLandByPark] = useState<Record<string, string | null>>({});
   const [radarIndex, setRadarIndex] = useState(0);
@@ -94,6 +98,12 @@ export default function App() {
     document.documentElement.dataset.theme = settings.theme ?? THEMES[0];
   }, [settings.theme]);
   useEffect(() => save('page', page), [page]);
+  // Rows cascade in only while a screen is arriving, not every time the list scrolls.
+  useEffect(() => {
+    setEntering(true);
+    const timer = setTimeout(() => setEntering(false), 700);
+    return () => clearTimeout(timer);
+  }, [page, parkIndex, targetId]);
   useEffect(() => setSoundEnabled(settings.sound), [settings.sound]);
 
   const park = parks ? parks[Math.min(parkIndex, parks.length - 1)] : null;
@@ -103,7 +113,7 @@ export default function App() {
   // reversed there by default. The System view can switch it either way.
   const flipCompass = settings.flipCompass ?? display.mode === 'glasses';
   const geo = useGeo(visible && settings.location);
-  const compass = useCompass(visible && (targetId !== null || page === 'radar' || page === 'sight' || display.layout !== 'single'), flipCompass);
+  const compass = useCompass(visible && (targetId !== null || page === 'radar' || page === 'map' || page === 'sight' || display.layout !== 'single'), flipCompass);
   const course = geo.speed !== null && geo.speed > 0.7 ? geo.course : null;
   const heading = compass ?? course;
 
@@ -219,7 +229,7 @@ export default function App() {
   // Cursor 0 is always the park switch in the header; the rest belong to the page.
   const maxCursor =
     page === 'system'
-      ? 6
+      ? 7
       : dataState !== 'ok'
         ? dataState === 'failed'
           ? 1
@@ -234,7 +244,7 @@ export default function App() {
                 : 0
               : page === 'scan'
             ? SCAN_HEAD - 1 + scanRows.length
-            : page === 'radar'
+            : page === 'radar' || page === 'map'
               ? blips.length
                 ? 1
                 : 0
@@ -273,7 +283,7 @@ export default function App() {
   const goPage = useCallback(
     (step: number) => {
       const index = (PAGES.indexOf(page) + step + PAGES.length) % PAGES.length;
-      setDirection(step);
+      setArrival(step > 0 ? 'right' : 'left');
       setPage(PAGES[index]);
       sound.page();
     },
@@ -282,7 +292,7 @@ export default function App() {
 
   const showPage = useCallback(
     (next: PageId) => {
-      setDirection(PAGES.indexOf(next) >= PAGES.indexOf(page) ? 1 : -1);
+      setArrival(PAGES.indexOf(next) >= PAGES.indexOf(page) ? 'right' : 'left');
       setPage(next);
       if (history.state?.target) history.back();
     },
@@ -294,6 +304,7 @@ export default function App() {
       if (!parks) return;
       const next = to ?? (parkIndex + 1) % parks.length;
       setParkIndex(next);
+      setArrival('flip');
       save('park', next);
       focusedRide.current = null;
       setCursors(current => ({...current, scan: 0, mission: 0, overview: 0}));
@@ -440,6 +451,7 @@ export default function App() {
     if (history.state?.target) history.replaceState(null, '');
     const onPop = () => {
       setTargetId(null);
+      setArrival('back');
       sound.back();
     };
     window.addEventListener('popstate', onPop);
@@ -466,7 +478,7 @@ export default function App() {
         }
         return;
       }
-      const onRadar = page === 'radar' && cursor === 1;
+      const onRadar = (page === 'radar' || page === 'map') && cursor === 1;
       const panning = page === 'sight' && cursor === 1 && !sightLive;
       switch (event.key) {
         case 'ArrowDown':
@@ -597,6 +609,10 @@ export default function App() {
           setSettings(current => ({...current, flipCompass: !flipCompass}));
           sound.select();
         }}
+        onFlat={() => {
+          setSettings(current => ({...current, flat: !current.flat}));
+          sound.select();
+        }}
         onTheme={() => {
           const index = THEMES.indexOf(settings.theme ?? THEMES[0]);
           setSettings(current => ({...current, theme: THEMES[(index + 1) % THEMES.length]}));
@@ -666,8 +682,35 @@ export default function App() {
       />
     );
     footer = shows.length ? `${String(Math.max(cursor, 1)).padStart(2, '0')} / ${shows.length}` : 'NO SHOWS';
+  } else if (page === 'map') {
+    body = settings.flat ? (
+      <div className="empty">
+        <p>3D VIEWS ARE OFF</p>
+        <p className="empty-sub">Turn them on in the System view.</p>
+      </div>
+    ) : (
+      <Holo
+        {...common}
+        mode="map"
+        park={park!}
+        blips={blips}
+        selected={selected}
+        heading={heading}
+        origin={origin!}
+        mission={queue}
+        theme={settings.theme ?? THEMES[0]}
+        onLock={lockTarget}
+        fallback={
+          <div className="empty">
+            <p>3D NOT AVAILABLE</p>
+            <p className="empty-sub">This display could not start WebGL.</p>
+          </div>
+        }
+      />
+    );
+    footer = blips.length ? `${String(selected + 1).padStart(2, '0')} / ${blips.length}` : '-- / --';
   } else if (page === 'radar') {
-    body = (
+    const flat = (
       <Radar
         {...common}
         blips={blips}
@@ -675,6 +718,23 @@ export default function App() {
         heading={origin?.remote ? null : heading}
         remote={origin?.remote ?? true}
         onLock={lockTarget}
+      />
+    );
+    body = settings.flat ? (
+      flat
+    ) : (
+      <Holo
+        {...common}
+        mode="radar"
+        park={park!}
+        blips={blips}
+        selected={selected}
+        heading={heading}
+        origin={origin!}
+        mission={queue}
+        theme={settings.theme ?? THEMES[0]}
+        onLock={lockTarget}
+        fallback={flat}
       />
     );
     footer = blips.length ? `${String(selected + 1).padStart(2, '0')} / ${blips.length}` : '-- / --';
@@ -707,7 +767,7 @@ export default function App() {
       ? {start: scanStart / scanRows.length, size: SCAN_PAGE / scanRows.length}
       : page === 'shows' && shows.length > SHOWS_PAGE
         ? {start: showsStart / shows.length, size: SHOWS_PAGE / shows.length}
-        : page === 'radar' && blips.length > 1
+        : (page === 'radar' || page === 'map') && blips.length > 1
         ? {start: selected / blips.length, size: 1 / blips.length}
         : null;
 
@@ -727,9 +787,10 @@ export default function App() {
           onSwitch={() => switchPark()}
           onSelect={display.touch ? showPage : undefined}
         />
-        <div key={page} className={`page ${direction > 0 ? 'from-right' : 'from-left'}`}>
+        <div key={`${page}-${park?.id ?? ''}`} className={`page from-${arrival} ${entering ? 'is-entering' : ''}`}>
           {body}
         </div>
+        {entering ? <i key={`wipe-${page}-${park?.id ?? ''}`} className={`wipe wipe-${arrival}`} aria-hidden="true" /> : null}
         <Footer text={footer} track={track} />
       </main>
       {overlay}
@@ -752,7 +813,7 @@ export default function App() {
         <header className="top">
           <p className="eyebrow">{`LINKED DISPLAY  /  ${showRadar ? (tracked >= 0 ? 'TRACKING' : 'RADAR') : 'OVERVIEW'}`}</p>
         </header>
-        <div key={showRadar ? 'radar' : 'overview'} className="page from-right">
+        <div key={showRadar ? 'radar' : 'overview'} className="page from-right is-entering">
           {showRadar ? (
             <Radar
               cursor={-1}

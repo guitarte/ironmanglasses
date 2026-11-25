@@ -13,14 +13,15 @@ Back button.
 
 ## Using it
 
-Swipe left or right to move between seven views. Swipe up or down to move through
+Swipe left or right to move between eight views. Swipe up or down to move through
 the controls in a view, and pinch to act. The back gesture leaves a target lock.
 
 | View | What it shows |
 |---|---|
 | OVERVIEW | Crowd gauge, average wait by land, and the three best rides to do next (wait plus walk, weighted toward headline rides and rides well below today's peak) |
 | SCAN | Every ride with its wait, trend arrow, and land. Pinch SORT or AREA to cycle them, pinch a ride to lock it |
-| RADAR | A scope of rides around you, coloured by wait. Swipe up or down to step through contacts, pinch to lock |
+| RADAR | A 3D scope of rides around you: a tilted disc with a pillar per ride, coloured and sized by wait. Swipe up or down to step through contacts, pinch to lock |
+| MAP | A 3D map of the whole park that slowly orbits, with land labels, a pillar per ride and your mission route drawn across it |
 | SIGHT | A look-around view: turn your head and rides slide along a compass tape in the direction they really are, with wait and distance. Pinch to lock the one you are facing. Without a compass, swipe down to pan |
 | SHOWS | Park hours with time left, and upcoming showtimes soonest first. Pinch a show for a reminder 15 minutes before it starts |
 | MISSION | Your ride queue, ordered into a walking route with total walk and queue time. Arriving at a ride ticks it off |
@@ -41,6 +42,15 @@ the app is open.
 When Meta AI's WebMCP bridge is present the app registers voice tools: park
 status, ride waits, navigate to a ride, recommend the next ride, set an alert, add
 rides to the mission, and switch park.
+
+The 3D views are drawn with three.js on a transparent canvas, with all text kept in
+the DOM. The library is loaded only when a 3D view is first opened, so it does not
+count against the first load. If WebGL will not start, RADAR falls back to the flat
+scope, and 3D VIEWS on the SYSTEM view turns them off.
+
+Screens change with a scan-bar wipe and cascading rows, a target lock opens like an
+iris, and switching park flips the view. With reduced motion set, these become a
+plain cross-fade and the 3D views stop animating.
 
 ## On a phone
 

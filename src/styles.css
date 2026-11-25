@@ -147,17 +147,17 @@ button:focus {
 
 .tabs {
   display: flex;
-  gap: 5px;
-  padding: 0 24px;
+  gap: 4px;
+  padding: 0 22px;
 }
 
 .tabs span {
   flex: 1;
   padding-bottom: 3px;
   border-bottom: 3px solid var(--c-faint);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-align: center;
   color: var(--c-dim);
 }
@@ -247,11 +247,73 @@ button:focus {
 }
 
 .page.from-right {
-  animation: slide-right 0.22s ease-out both;
+  animation: slide-right 0.42s cubic-bezier(0.16, 0.84, 0.3, 1) both;
 }
 
 .page.from-left {
-  animation: slide-left 0.22s ease-out both;
+  animation: slide-left 0.42s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+.page.from-back {
+  animation: pull-back 0.45s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+.page.from-flip {
+  transform-origin: 50% 0;
+  animation: flip-in 0.5s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+/* A bright scan bar crosses the screen ahead of the incoming view. */
+.wipe {
+  position: absolute;
+  top: 64px;
+  bottom: 34px;
+  left: 0;
+  width: 120px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--c-glow) 45%, var(--c) 50%, var(--c-glow) 55%, transparent);
+  opacity: 0;
+}
+
+.wipe-right {
+  animation: wipe-left 0.5s ease-out both;
+}
+
+.wipe-left {
+  animation: wipe-right 0.5s ease-out both;
+}
+
+.wipe-back,
+.wipe-flip {
+  top: 0;
+  bottom: auto;
+  left: 16px;
+  right: 16px;
+  width: auto;
+  height: 90px;
+  background: linear-gradient(180deg, transparent, var(--c-glow) 45%, var(--c) 50%, var(--c-glow) 55%, transparent);
+  animation: wipe-down 0.5s ease-out both;
+}
+
+/* Rows cascade in behind the scan bar. */
+.page.is-entering .rows > *,
+.page.is-entering .legs > *,
+.page.is-entering .moves > *,
+.page.is-entering .toggles > * {
+  animation: cascade 0.36s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(1) { animation-delay: 0.1s; }
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(2) { animation-delay: 0.15s; }
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(3) { animation-delay: 0.2s; }
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(4) { animation-delay: 0.25s; }
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(5) { animation-delay: 0.3s; }
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(6) { animation-delay: 0.35s; }
+.page.is-entering :is(.rows, .legs, .moves, .toggles) > :nth-child(n + 7) { animation-delay: 0.4s; }
+
+.hud.target {
+  animation: iris 0.55s cubic-bezier(0.16, 0.84, 0.3, 1) both;
 }
 
 .foot {
@@ -892,7 +954,7 @@ button:focus {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 58px;
+  height: 48px;
   padding: 0 12px;
   border: 2px solid var(--c-dim);
   font-size: 16px;
@@ -1347,14 +1409,85 @@ button:focus {
 @keyframes slide-right {
   from {
     opacity: 0;
-    transform: translateX(36px);
+    transform: translateX(130px) skewX(-6deg);
   }
 }
 
 @keyframes slide-left {
   from {
     opacity: 0;
-    transform: translateX(-36px);
+    transform: translateX(-130px) skewX(6deg);
+  }
+}
+
+@keyframes pull-back {
+  from {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes flip-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateX(-70deg);
+  }
+}
+
+@keyframes wipe-left {
+  0% {
+    opacity: 1;
+    transform: translateX(600px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-120px);
+  }
+}
+
+@keyframes wipe-right {
+  0% {
+    opacity: 1;
+    transform: translateX(-120px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(600px);
+  }
+}
+
+@keyframes wipe-down {
+  0% {
+    opacity: 1;
+    transform: translateY(-90px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(600px);
+  }
+}
+
+@keyframes cascade {
+  from {
+    opacity: 0;
+    transform: translateX(46px);
+  }
+}
+
+@keyframes iris {
+  from {
+    opacity: 0.2;
+    clip-path: circle(4% at 50% 48%);
+    transform: scale(1.18);
+  }
+  to {
+    clip-path: circle(80% at 50% 48%);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
   }
 }
 
@@ -1438,6 +1571,16 @@ button:focus {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* Reduced motion still gets a plain cross-fade between screens, with nothing moving. */
+  .page,
+  .hud.target {
+    animation: fade 0.22s ease-out both !important;
+  }
+
+  .wipe {
+    display: none;
   }
 
   .boot-log span {
@@ -1882,4 +2025,70 @@ html:not([data-display='glasses']) .contact-hint::before {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   white-space: normal;
+}
+
+/* ---- Hologram (three.js) --------------------------------------------------- */
+.holo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.holo-view {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+}
+
+.holo-view canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.holo-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.holo-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  color: var(--c-dim);
+  will-change: transform;
+}
+
+.holo-label.is-north {
+  font-size: 15px;
+  color: var(--c);
+}
+
+.holo-label.is-land {
+  padding: 0 4px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.holo-label.is-selected {
+  padding: 2px 7px;
+  border: 2px solid var(--tone);
+  background: #000;
+  font-size: 14px;
+  color: var(--white);
+}
+
+.holo-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--c-dim);
 }
