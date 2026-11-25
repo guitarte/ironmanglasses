@@ -3,6 +3,7 @@
   --c: #4fe3ff;
   --c-dim: #2aa6c4;
   --c-faint: rgba(79, 227, 255, 0.16);
+  --c-glow: rgba(79, 227, 255, 0.35);
   --white: #e9fbff;
   --amber: #ffb43a;
   --red: #ff6450;
@@ -135,7 +136,7 @@ button:focus {
 .action:focus {
   border-color: var(--c);
   background: var(--c-faint);
-  box-shadow: inset 0 0 18px rgba(79, 227, 255, 0.35);
+  box-shadow: inset 0 0 18px var(--c-glow);
 }
 
 /* ---- Header ----------------------------------------------------------- */
@@ -146,8 +147,8 @@ button:focus {
 
 .tabs {
   display: flex;
-  gap: 6px;
-  padding: 0 26px;
+  gap: 5px;
+  padding: 0 24px;
 }
 
 .tabs span {
@@ -156,7 +157,7 @@ button:focus {
   border-bottom: 3px solid var(--c-faint);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.1em;
   text-align: center;
   color: var(--c-dim);
 }
@@ -900,11 +901,6 @@ button:focus {
   white-space: nowrap;
 }
 
-.toggle.is-wide {
-  grid-column: 1 / -1;
-  height: 46px;
-}
-
 .toggle-value {
   font-size: 20px;
   font-weight: 700;
@@ -1545,4 +1541,345 @@ html:not([data-display='glasses']) .tabs span {
 
 html:not([data-display='glasses']) .contact-hint::before {
   content: 'TAP OR ';
+}
+
+/* ---- Themes -------------------------------------------------------------- */
+[data-theme='ion'] {
+  --c: #b9a8ff;
+  --c-dim: #7f6fd0;
+  --c-faint: rgba(185, 168, 255, 0.17);
+  --c-glow: rgba(185, 168, 255, 0.38);
+}
+
+[data-theme='rose'] {
+  --c: #ff9acb;
+  --c-dim: #c9659a;
+  --c-faint: rgba(255, 154, 203, 0.16);
+  --c-glow: rgba(255, 154, 203, 0.36);
+}
+
+[data-theme='frost'] {
+  --c: #eaf6ff;
+  --c-dim: #8fb0c2;
+  --c-faint: rgba(234, 246, 255, 0.14);
+  --c-glow: rgba(234, 246, 255, 0.32);
+}
+
+/* ---- Sight --------------------------------------------------------------- */
+.sight {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sight-view {
+  flex: none;
+  width: 568px;
+  height: 322px;
+}
+
+.sight-view line,
+.sight-view path {
+  fill: none;
+  stroke: var(--c-dim);
+  stroke-width: 2;
+}
+
+.tape line.major {
+  stroke: var(--c);
+  stroke-width: 3;
+}
+
+.tape text {
+  fill: var(--c-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-anchor: middle;
+}
+
+.tape text.major {
+  fill: var(--white);
+  font-size: 14px;
+}
+
+.sight-view .sight-notch {
+  fill: var(--c);
+  stroke: none;
+}
+
+.sight-view .sight-axis {
+  stroke: var(--c-faint);
+  stroke-dasharray: 3 7;
+}
+
+.sight-mark circle {
+  fill: var(--tone);
+}
+
+.sight-mark .stem {
+  stroke: var(--tone);
+  stroke-width: 1.5;
+  opacity: 0.4;
+}
+
+.sight-mark .bracket {
+  stroke: var(--white);
+  stroke-width: 2.5;
+}
+
+.sight-mark text {
+  fill: var(--white);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+}
+
+.sight-mark .sight-sub {
+  fill: var(--tone);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 1;
+}
+
+.sight-mark.is-aimed text {
+  opacity: 1;
+  font-weight: 700;
+}
+
+.sight-mark.is-aimed .stem {
+  opacity: 1;
+  stroke-width: 2.5;
+}
+
+.sight-contact:focus {
+  border-color: var(--c);
+  background: var(--c-faint);
+  box-shadow: inset 0 0 18px var(--c-glow);
+}
+
+.sight-contact {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 12px;
+  border: 2px solid var(--c-dim);
+  border-left: 4px solid var(--tone);
+}
+
+.sight-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sight-wait {
+  flex: none;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--tone);
+  white-space: pre;
+}
+
+.sight-contact .contact-hint {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--c-dim);
+}
+
+.sight-none {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-align: center;
+  color: var(--c-dim);
+}
+
+.sight-note {
+  flex: none;
+}
+
+/* ---- Shows --------------------------------------------------------------- */
+.shows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hours {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--c-dim);
+  background: var(--c-faint);
+}
+
+.hours b {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--white);
+}
+
+.hours-left {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--green);
+}
+
+.hours.is-closing {
+  border-left-color: var(--amber);
+}
+
+.hours.is-closing .hours-left {
+  color: var(--amber);
+}
+
+.extras {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: var(--white);
+  white-space: pre;
+}
+
+/* ---- Deck: the rest of a phone screen beside the square pane ---------------- */
+.deck {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck.is-tall {
+  flex-direction: column;
+  align-items: center;
+}
+
+.deck.is-wide {
+  align-items: center;
+}
+
+.deck-scope {
+  flex: none;
+}
+
+.deck-scope circle,
+.deck-scope line {
+  fill: none;
+  stroke: var(--c-dim);
+  stroke-width: 1.5;
+}
+
+.deck-scope text {
+  fill: var(--c);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.deck-scope .deck-sweep {
+  fill: var(--c-faint);
+  transform-origin: 0 0;
+  animation: sweep 4s linear infinite;
+}
+
+.deck-scope .deck-blip {
+  fill: var(--tone);
+  stroke: none;
+}
+
+.deck-scope .deck-blip.is-on {
+  stroke: var(--white);
+  stroke-width: 2.5;
+}
+
+.deck-scope .deck-self {
+  fill: var(--white);
+}
+
+.deck-cards {
+  flex: 1;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.deck-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-left: 4px solid var(--tone);
+  background: var(--c-faint);
+}
+
+.deck-card b {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-line {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--tone);
+  white-space: pre;
+}
+
+.deck.is-roomy .deck-card {
+  padding: 12px 16px;
+  gap: 4px;
+}
+
+.deck.is-roomy .deck-card b {
+  font-size: 24px;
+}
+
+.deck.is-roomy .deck-line {
+  font-size: 17px;
+}
+
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.deck.is-tall .deck-card b {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
 }

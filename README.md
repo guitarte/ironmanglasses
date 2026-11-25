@@ -13,7 +13,7 @@ Back button.
 
 ## Using it
 
-Swipe left or right to move between five views. Swipe up or down to move through
+Swipe left or right to move between seven views. Swipe up or down to move through
 the controls in a view, and pinch to act. The back gesture leaves a target lock.
 
 | View | What it shows |
@@ -21,8 +21,10 @@ the controls in a view, and pinch to act. The back gesture leaves a target lock.
 | OVERVIEW | Crowd gauge, average wait by land, and the three best rides to do next (wait plus walk, weighted toward headline rides and rides well below today's peak) |
 | SCAN | Every ride with its wait, trend arrow, and land. Pinch SORT or AREA to cycle them, pinch a ride to lock it |
 | RADAR | A scope of rides around you, coloured by wait. Swipe up or down to step through contacts, pinch to lock |
+| SIGHT | A look-around view: turn your head and rides slide along a compass tape in the direction they really are, with wait and distance. Pinch to lock the one you are facing. Without a compass, swipe down to pan |
+| SHOWS | Park hours with time left, and upcoming showtimes soonest first. Pinch a show for a reminder 15 minutes before it starts |
 | MISSION | Your ride queue, ordered into a walking route with total walk and queue time. Arriving at a ride ticks it off |
-| SYSTEM | Sound, location, alert and trend controls, plus voice command examples |
+| SYSTEM | Sound, location, alert, trend, compass and colour theme controls, plus voice command examples |
 
 Locking a ride opens the target view: distance, walk time, current wait, a trend
 sparkline, today's peak, and an arrow toward the ride. The arrow uses the glasses'
@@ -47,11 +49,16 @@ treats any touch screen that is not the glasses' 600 px square as a phone, scale
 the HUD panes to fit, and re-measures on every resize, which is what a folding
 phone reports when it opens or closes.
 
-- **Folded iPhone Duo, or a small phone:** one pane.
-- **Unfolded iPhone Duo, or a tall phone:** two panes. The second is a linked
-  display that shows the radar (tracking the locked ride while navigating), or the
-  overview while the main pane is the radar. Panes sit side by side in landscape
-  and stack in portrait.
+The main pane always takes the full short side of the screen, and a deck fills
+whatever is left with a live scope and tappable cards (best move or the ride being
+tracked, next show, park hours). That covers every pose:
+
+- **Folded, portrait or landscape:** pane plus a deck below or beside it.
+- **Unfolded, portrait or landscape:** a full-size pane plus a deck.
+- **Half folded (tabletop or tent):** when the browser reports two viewport
+  segments, one pane sits on each half so nothing straddles the hinge: the main
+  view on one and a linked radar or overview on the other. Add `?fold=side` or
+  `?fold=stack` to force this.
 
 Tap the view tabs or swipe sideways to change view, drag up or down to move through
 a list, tap to select, and use the BACK button or a rightward swipe to leave a
@@ -63,6 +70,8 @@ screen. Append `?mode=glasses`, `?mode=phone` or `?mode=duo` to force a layout.
 - Wait times: [ThemeParks.wiki API](https://api.themeparks.wiki/docs/v1/), fetched
   from the browser every 30 seconds while the display is on. No key required.
   The last good reading is cached and marked with its age if the link drops.
+- Single rider waits, Lightning Lane return times and showtimes come from the same
+  live feed; park hours from the API's schedule endpoint, cached for an hour.
 - Lands: the source has no land data, so `src/lands.ts` assigns each ride by name,
   falling back to the land of the nearest known ride.
 - Attraction coordinates: baked into `public/parks.json` by

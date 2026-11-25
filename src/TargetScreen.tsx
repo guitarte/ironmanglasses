@@ -3,7 +3,7 @@ import type {Park} from './api';
 import type {AlertRule} from './App';
 import {angleDelta, bearingDeg, cardinal, formatDistance, walkMinutes} from './geo';
 import {samplesFor} from './history';
-import {ageLabel, level, statusLabel, type Row} from './model';
+import {ageLabel, level, statusLabel, type Row, passLabel} from './model';
 import type {Geo} from './sensors';
 
 export const TARGET_ACTIONS = 3;
@@ -101,6 +101,12 @@ export function TargetScreen(props: Props) {
     row.trend === 'up' ? `RISING ${row.delta}` : row.trend === 'down' ? `FALLING ${Math.abs(row.delta)}` : row.trend === 'flat' ? 'STEADY' : null;
   const alertLabel =
     props.alert === undefined ? 'ALERT OFF' : props.alert === 'open' ? 'ALERT: OPEN' : `ALERT ≤ ${props.alert}`;
+  const extras: string[] = [];
+  if (row.status === 'OPERATING') {
+    if (row.single !== null) extras.push(`SINGLE RIDER ${row.single} MIN`);
+    const pass = passLabel(row.pass);
+    if (pass) extras.push(pass === 'LL GONE' ? 'LIGHTNING LANE GONE' : pass.replace('LL', 'LIGHTNING LANE'));
+  }
   const actions: [label: string, on: boolean, action: () => void][] = [
     [props.queued ? 'IN MISSION' : 'MISSION +', props.queued, props.onQueue],
     [alertLabel, props.alert !== undefined, props.onAlert],
@@ -178,6 +184,7 @@ export function TargetScreen(props: Props) {
       <p className={`turn ${aligned ? 'is-aligned' : ''}`} role="status">
         {turn}
       </p>
+      {extras.length ? <p className="extras">{extras.join('   /   ')}</p> : null}
       <p className="telemetry">
         {headingSource ?? 'NORTH UP'}
         {geo.accuracy !== null && geo.state === 'ok' ? `  /  GPS ${Math.round(geo.accuracy * 3.28084)} FT` : ''}

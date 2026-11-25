@@ -1,6 +1,6 @@
 import type {AlertRule} from '../App';
 import {cardinal, formatDistance} from '../geo';
-import {level, SORT_LABEL, statusLabel, type Row, type Sort} from '../model';
+import {level, SORT_LABEL, statusLabel, type Row, type Sort, passLabel} from '../model';
 import type {Geo} from '../sensors';
 
 export const SCAN_PAGE = 6;
@@ -69,6 +69,7 @@ export function Scan(props: Props) {
           } else if (row.land && !land) detail.push(row.land);
           const alert = alerts[row.id];
           const place = queue.indexOf(row.id);
+          const pass = row.status === 'OPERATING' ? passLabel(row.pass) : null;
           return (
             <button
               type="button"
@@ -84,6 +85,8 @@ export function Scan(props: Props) {
                   {detail.join('  /  ')}
                   {alert !== undefined ? <em className="tag tag-alert">{alert === 'open' ? 'ALERT' : `ALERT ${alert}`}</em> : null}
                   {place >= 0 ? <em className="tag">MISSION</em> : null}
+                  {row.single !== null && row.status === 'OPERATING' ? <em className="tag">{`SINGLE ${row.single}`}</em> : null}
+                  {pass ? <em className="tag">{pass}</em> : null}
                 </span>
               </span>
               {row.trend === 'up' || row.trend === 'down' ? (
