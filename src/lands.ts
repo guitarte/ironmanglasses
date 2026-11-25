@@ -35,6 +35,26 @@ function byName(parkKey: string, name: string): string | null {
   return null;
 }
 
+/** Short codes for chart labels. */
+export const LAND_CODE: Record<string, string> = {
+  Toontown: 'TOON',
+  'New Orleans Sq': 'NOS',
+  Tomorrowland: 'TMRW',
+  "Galaxy's Edge": 'SWGE',
+  'Bayou Country': 'BAYU',
+  Frontierland: 'FRNT',
+  Adventureland: 'ADV',
+  Fantasyland: 'FANT',
+  'Main Street': 'MAIN',
+  'Avengers Campus': 'AVNG',
+  'Cars Land': 'CARS',
+  'Pixar Pier': 'PIXR',
+  'Paradise Gardens': 'PARA',
+  'Grizzly Peak': 'GRIZ',
+  'San Fransokyo': 'SANF',
+  'Hollywood Land': 'HWD',
+};
+
 export type LandIndex = {
   /** Lands in walking order, as listed in the rules. */
   order: string[];
