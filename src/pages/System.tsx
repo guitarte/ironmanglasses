@@ -5,7 +5,7 @@ import {VOICE_EXAMPLES, voiceAvailable} from '../voice';
 type Props = {
   cursor: number;
   onFocusCursor: (cursor: number) => void;
-  settings: {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string};
+  settings: {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string; flat?: boolean};
   geo: Geo;
   alertCount: number;
   dataState: DataState;
@@ -14,6 +14,7 @@ type Props = {
   onLocation: () => void;
   onCompass: () => void;
   onTheme: () => void;
+  onFlat: () => void;
   onClearAlerts: () => void;
   onResetTrends: () => void;
 };
@@ -38,6 +39,7 @@ export function System(props: Props) {
     ['RESET TRENDS', 'RUN', false, props.onResetTrends],
     ['COMPASS', settings.flipCompass ? 'REVERSED' : 'NORMAL', !!settings.flipCompass, props.onCompass],
     ['THEME', (settings.theme ?? THEMES[0]).toUpperCase(), true, props.onTheme],
+    ['3D VIEWS', settings.flat ? 'OFF' : 'ON', !settings.flat, props.onFlat],
   ];
   const voice = voiceAvailable();
   return (

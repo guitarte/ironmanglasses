@@ -2,7 +2,7 @@ import {useEffect} from 'react';
 import type {Park} from './api';
 import {ageLabel} from './model';
 
-export const PAGES = ['overview', 'scan', 'radar', 'sight', 'shows', 'mission', 'system'] as const;
+export const PAGES = ['overview', 'scan', 'radar', 'map', 'sight', 'shows', 'mission', 'system'] as const;
 const TAB: Record<string, string> = {overview: 'HOME'};
 export type PageId = (typeof PAGES)[number];
 export type DataState = 'loading' | 'failed' | 'empty' | 'ok';
