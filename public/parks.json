@@ -1,0 +1,21 @@
+{
+  "generatedAt": null,
+  "parks": [
+    {
+      "id": "7340550b-c14d-4def-80bb-acdb51d49a66",
+      "key": "DL",
+      "name": "Disneyland",
+      "lat": 33.8121,
+      "lon": -117.919,
+      "attractions": []
+    },
+    {
+      "id": "832fcd51-ea19-4e77-85c7-75d5843b127c",
+      "key": "DCA",
+      "name": "California Adventure",
+      "lat": 33.8061,
+      "lon": -117.9209,
+      "attractions": []
+    }
+  ]
+}
