@@ -21,7 +21,7 @@ const ARRIVE_M = 35;
 
 type LiveState = {set: LiveSet | null; loading: boolean; failed: boolean};
 const EMPTY: LiveState = {set: null, loading: true, failed: false};
-type Settings = {sound: boolean; location: boolean};
+type Settings = {sound: boolean; location: boolean; flipCompass?: boolean};
 export type AlertRule = number | 'open';
 
 /** Keeps a fixed-size window of a list scrolled so that `index` stays inside it. */
@@ -75,8 +75,11 @@ export default function App() {
   const park = parks ? parks[Math.min(parkIndex, parks.length - 1)] : null;
   const parkLive = (park && live[park.id]) || EMPTY;
 
+  // On the glasses the raw reading comes out facing backwards (reported from real use), so it is
+  // reversed there by default. The System view can switch it either way.
+  const flipCompass = settings.flipCompass ?? display.mode === 'glasses';
   const geo = useGeo(visible && settings.location);
-  const compass = useCompass(visible && (targetId !== null || page === 'radar' || display.dual));
+  const compass = useCompass(visible && (targetId !== null || page === 'radar' || display.dual), flipCompass);
   const course = geo.speed !== null && geo.speed > 0.7 ? geo.course : null;
   const heading = compass ?? course;
 
@@ -176,7 +179,7 @@ export default function App() {
   // Cursor 0 is always the park switch in the header; the rest belong to the page.
   const maxCursor =
     page === 'system'
-      ? 4
+      ? 5
       : dataState !== 'ok'
         ? dataState === 'failed'
           ? 1
@@ -496,7 +499,7 @@ export default function App() {
     body = (
       <System
         {...common}
-        settings={settings}
+        settings={{...settings, flipCompass}}
         geo={geo}
         alertCount={Object.keys(alerts).length}
         dataState={dataState}
@@ -510,6 +513,10 @@ export default function App() {
         }}
         onLocation={() => {
           setSettings(current => ({...current, location: !current.location}));
+          sound.select();
+        }}
+        onCompass={() => {
+          setSettings(current => ({...current, flipCompass: !flipCompass}));
           sound.select();
         }}
         onClearAlerts={() => {

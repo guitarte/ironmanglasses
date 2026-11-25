@@ -35,3 +35,36 @@ export const walkMinutes = (m: number): number => Math.max(1, Math.round((m * 1.
 export function angleDelta(a: number, b: number): number {
   return ((((a - b) % 360) + 540) % 360) - 180;
 }
+
+
+/**
+ * Compass heading, degrees clockwise from north, of the direction the wearer is looking,
+ * from DeviceOrientation angles measured against true or magnetic north.
+ *
+ * `360 - alpha` is only the heading of the device's top edge, which is right for a phone
+ * lying flat. A display held or worn upright has its top edge pointing at the sky, where
+ * that reading is unstable and flips by 180 degrees as the tilt passes vertical. So once
+ * the display is tilted up, this uses the direction out of the back of the screen instead.
+ */
+export function lookHeading(alpha: number, beta: number, gamma: number, screenAngle = 0): number {
+  const a = alpha * RAD;
+  const b = beta * RAD;
+  const g = gamma * RAD;
+  const cA = Math.cos(a);
+  const sA = Math.sin(a);
+  const cB = Math.cos(b);
+  const sB = Math.sin(b);
+  const cG = Math.cos(g);
+  const sG = Math.sin(g);
+  // How far the screen normal is from vertical: 1 when lying flat, 0 when upright.
+  const flatness = Math.abs(cB * cG);
+  let degrees: number;
+  if (flatness < 0.75) {
+    const east = -cA * sG - sA * sB * cG;
+    const north = -sA * sG + cA * sB * cG;
+    degrees = Math.atan2(east, north) / RAD;
+  } else {
+    degrees = -alpha + screenAngle;
+  }
+  return ((degrees % 360) + 360) % 360;
+}

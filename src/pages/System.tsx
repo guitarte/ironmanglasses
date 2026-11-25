@@ -5,13 +5,14 @@ import {VOICE_EXAMPLES, voiceAvailable} from '../voice';
 type Props = {
   cursor: number;
   onFocusCursor: (cursor: number) => void;
-  settings: {sound: boolean; location: boolean};
+  settings: {sound: boolean; location: boolean; flipCompass?: boolean};
   geo: Geo;
   alertCount: number;
   dataState: DataState;
   display: string;
   onSound: () => void;
   onLocation: () => void;
+  onCompass: () => void;
   onClearAlerts: () => void;
   onResetTrends: () => void;
 };
@@ -32,6 +33,7 @@ export function System(props: Props) {
     ['LOCATION', settings.location ? GEO_LABEL[geo.state] : 'OFF', settings.location, props.onLocation],
     ['CLEAR ALERTS', String(alertCount), alertCount > 0, props.onClearAlerts],
     ['RESET TRENDS', 'RUN', false, props.onResetTrends],
+    ['COMPASS', settings.flipCompass ? 'REVERSED' : 'NORMAL', !!settings.flipCompass, props.onCompass],
   ];
   const voice = voiceAvailable();
   return (
@@ -41,7 +43,7 @@ export function System(props: Props) {
           <button
             type="button"
             key={label}
-            className={`toggle ${on ? 'is-on' : ''}`}
+            className={`toggle ${on ? 'is-on' : ''} ${index === 4 ? 'is-wide' : ''}`}
             data-cursor={index + 1}
             onFocus={() => onFocusCursor(index + 1)}
             onClick={action}

@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {lookHeading} from './geo';
 
 export function useVisible(): boolean {
   const [visible, setVisible] = useState(() => document.visibilityState !== 'hidden');
@@ -71,7 +72,7 @@ export async function requestOrientation(): Promise<OrientationPermission> {
 const COMMIT_MS = 100;
 
 /** Compass heading in degrees, or null until an absolute reading arrives. */
-export function useCompass(active: boolean): number | null {
+export function useCompass(active: boolean, flip = false): number | null {
   const [heading, setHeading] = useState<number | null>(null);
   const smooth = useRef<number | null>(null);
   const lastCommit = useRef(0);
@@ -81,8 +82,11 @@ export function useCompass(active: boolean): number | null {
     const onOrientation = (event: Event) => {
       const e = event as DeviceOrientationEvent & {webkitCompassHeading?: number};
       let raw: number | null = null;
-      if (typeof e.webkitCompassHeading === 'number') raw = e.webkitCompassHeading;
-      else if (e.absolute && typeof e.alpha === 'number') raw = (360 - e.alpha) % 360;
+      // Safari's alpha is relative, but its compass reading gives the same angle north-referenced.
+      const alpha =
+        typeof e.webkitCompassHeading === 'number' ? 360 - e.webkitCompassHeading : e.absolute ? e.alpha : null;
+      if (typeof alpha === 'number')
+        raw = (lookHeading(alpha, e.beta ?? 0, e.gamma ?? 0, screen.orientation?.angle ?? 0) + (flip ? 180 : 0)) % 360;
       if (raw === null || Number.isNaN(raw)) return;
       const previous = smooth.current;
       const next =
@@ -102,6 +106,6 @@ export function useCompass(active: boolean): number | null {
       smooth.current = null;
       setHeading(null);
     };
-  }, [active]);
+  }, [active, flip]);
   return heading;
 }
