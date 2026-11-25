@@ -27,7 +27,9 @@ the controls in a view, and pinch to act. The back gesture leaves a target lock.
 Locking a ride opens the target view: distance, walk time, current wait, a trend
 sparkline, today's peak, and an arrow toward the ride. The arrow uses the glasses'
 compass when available, falls back to GPS direction of travel, and otherwise draws
-north-up. From there you can add the ride to the mission, set an alert for when its
+north-up. The heading is taken from where the display is facing, not from
+its top edge, so it holds up when the display is worn or held upright. If the arrow
+points the wrong way round on your device, flip COMPASS on the SYSTEM view. From there you can add the ride to the mission, set an alert for when its
 wait drops below a threshold (or when it reopens), or rescan.
 
 Location is only requested after you pinch something that needs it. Trends, the
