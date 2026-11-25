@@ -5,7 +5,7 @@ import {VOICE_EXAMPLES, voiceAvailable} from '../voice';
 type Props = {
   cursor: number;
   onFocusCursor: (cursor: number) => void;
-  settings: {sound: boolean; location: boolean; flipCompass?: boolean};
+  settings: {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string};
   geo: Geo;
   alertCount: number;
   dataState: DataState;
@@ -13,6 +13,7 @@ type Props = {
   onSound: () => void;
   onLocation: () => void;
   onCompass: () => void;
+  onTheme: () => void;
   onClearAlerts: () => void;
   onResetTrends: () => void;
 };
@@ -26,6 +27,8 @@ const GEO_LABEL: Record<Geo['state'], string> = {
   error: 'NO FIX',
 };
 
+export const THEMES = ['arc', 'ion', 'rose', 'frost'];
+
 export function System(props: Props) {
   const {settings, geo, alertCount, onFocusCursor} = props;
   const toggles: [label: string, value: string, on: boolean, action: () => void][] = [
@@ -34,6 +37,7 @@ export function System(props: Props) {
     ['CLEAR ALERTS', String(alertCount), alertCount > 0, props.onClearAlerts],
     ['RESET TRENDS', 'RUN', false, props.onResetTrends],
     ['COMPASS', settings.flipCompass ? 'REVERSED' : 'NORMAL', !!settings.flipCompass, props.onCompass],
+    ['THEME', (settings.theme ?? THEMES[0]).toUpperCase(), true, props.onTheme],
   ];
   const voice = voiceAvailable();
   return (
@@ -43,7 +47,7 @@ export function System(props: Props) {
           <button
             type="button"
             key={label}
-            className={`toggle ${on ? 'is-on' : ''} ${index === 4 ? 'is-wide' : ''}`}
+            className={`toggle ${on ? 'is-on' : ''}`}
             data-cursor={index + 1}
             onFocus={() => onFocusCursor(index + 1)}
             onClick={action}

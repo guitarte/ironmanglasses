@@ -1,4 +1,4 @@
-import type {LiveSet, Park} from './api';
+import type {Hours, LiveSet, Park, Pass} from './api';
 import {bearingDeg, distanceM, walkMinutes} from './geo';
 import {trendFor, type Trend} from './history';
 import {landIndex} from './lands';
@@ -13,6 +13,9 @@ export type Row = {
   name: string;
   status: string;
   wait: number | null;
+  /** Single rider queue, minutes. */
+  single: number | null;
+  pass: Pass | null;
   lat: number | null;
   lon: number | null;
   land: string | null;
@@ -88,6 +91,8 @@ export function buildRows(park: Park, live: LiveSet | null, geo: Geo, origin: Or
       name: entry.name,
       status: entry.status,
       wait: entry.wait,
+      single: entry.single ?? null,
+      pass: entry.pass ?? null,
       lat,
       lon,
       land: lands.of(entry.id, entry.name),
@@ -159,4 +164,38 @@ export function ageLabel(fetchedAt: number, now: number, stale = false): string 
 export function duration(minutes: number): string {
   if (minutes < 60) return `${minutes} MIN`;
   return `${Math.floor(minutes / 60)}H ${String(minutes % 60).padStart(2, '0')}M`;
+}
+
+export function clock(time: number): string {
+  return new Date(time).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+}
+
+export function passLabel(pass: Pass | null): string | null {
+  if (!pass) return null;
+  if (pass.soldOut || pass.start === null) return 'LL GONE';
+  return `LL ${clock(pass.start)}${pass.price ? ` ${pass.price}` : ''}`;
+}
+
+export type Show = {id: string; name: string; next: number; later: number[]; minutes: number};
+
+/** Shows with a performance still to come, soonest first. */
+export function upcomingShows(live: LiveSet | null, now: number): Show[] {
+  return (live?.shows ?? [])
+    .map(show => {
+      const ahead = show.times.filter(time => time > now - 60000);
+      return ahead.length
+        ? {id: show.id, name: show.name, next: ahead[0], later: ahead.slice(1), minutes: Math.max(0, Math.round((ahead[0] - now) / 60000))}
+        : null;
+    })
+    .filter((show): show is Show => show !== null)
+    .sort((a, b) => a.next - b.next || a.name.localeCompare(b.name));
+}
+
+export function hoursLabel(hours: Hours | null, now: number): {head: string; detail: string; closing: boolean} | null {
+  if (!hours) return null;
+  if (now < hours.open)
+    return {head: `OPENS ${clock(hours.open)}`, detail: `IN ${duration(Math.round((hours.open - now) / 60000))}`, closing: false};
+  if (now >= hours.close) return {head: 'PARK CLOSED', detail: `SINCE ${clock(hours.close)}`, closing: true};
+  const left = Math.round((hours.close - now) / 60000);
+  return {head: `OPEN UNTIL ${clock(hours.close)}`, detail: `${duration(left)} LEFT`, closing: left <= 60};
 }

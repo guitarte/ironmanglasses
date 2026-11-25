@@ -1,14 +1,29 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {bestMoves, planRoute} from './advisor';
-import {cachedLive, fetchLive, loadParks, type LiveSet, type Park} from './api';
+import {cachedLive, fetchHours, fetchLive, loadParks, type Hours, type LiveSet, type Park} from './api';
+import {Deck} from './Deck';
 import {PANE, useDisplay, useTouchPad} from './display';
 import {clearHistory, recordHistory} from './history';
-import {buildRows, landsPresent, originFor, parkStats, sortRows, SORTS, type Row, type Sort} from './model';
+import {
+  buildRows,
+  hoursLabel,
+  landsPresent,
+  originFor,
+  parkStats,
+  sortRows,
+  SORTS,
+  upcomingShows,
+  type Row,
+  type Show,
+  type Sort,
+} from './model';
 import {Mission, MISSION_PAGE} from './pages/Mission';
 import {Overview} from './pages/Overview';
 import {Radar} from './pages/Radar';
 import {Scan, SCAN_HEAD, SCAN_PAGE} from './pages/Scan';
-import {System} from './pages/System';
+import {Shows, SHOWS_PAGE} from './pages/Shows';
+import {Sight, sighted} from './pages/Sight';
+import {System, THEMES} from './pages/System';
 import {requestOrientation, useCompass, useGeo, useVisible, type OrientationPermission} from './sensors';
 import {Banner, Boot, Footer, Header, PAGES, StatePanel, type BannerState, type DataState, type PageId} from './Shell';
 import {setSoundEnabled, sound} from './sound';
@@ -18,10 +33,12 @@ import {registerVoice, type VoiceApi} from './voice';
 
 const POLL_MS = 30000;
 const ARRIVE_M = 35;
+const REMIND_MIN = 15;
+const PAN_STEP = 30;
 
 type LiveState = {set: LiveSet | null; loading: boolean; failed: boolean};
 const EMPTY: LiveState = {set: null, loading: true, failed: false};
-type Settings = {sound: boolean; location: boolean; flipCompass?: boolean};
+type Settings = {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string};
 export type AlertRule = number | 'open';
 
 /** Keeps a fixed-size window of a list scrolled so that `index` stays inside it. */
@@ -53,7 +70,7 @@ export default function App() {
     return PAGES.includes(stored) ? stored : 'overview';
   });
   const [direction, setDirection] = useState(1);
-  const [cursors, setCursors] = useState<Record<PageId, number>>({overview: 0, scan: 0, radar: 0, mission: 0, system: 0});
+  const [cursors, setCursors] = useState<Record<PageId, number>>({overview: 0, scan: 0, radar: 0, sight: 0, shows: 0, mission: 0, system: 0});
   const [sort, setSort] = useState<Sort>('wait');
   const [landByPark, setLandByPark] = useState<Record<string, string | null>>({});
   const [radarIndex, setRadarIndex] = useState(0);
@@ -63,12 +80,19 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() => load('settings', {sound: true, location: false}));
   const [queues, setQueues] = useState<Record<string, string[]>>(() => load('queues', {}));
   const [alerts, setAlerts] = useState<Record<string, AlertRule>>(() => load('alerts', {}));
+  const [reminders, setReminders] = useState<Record<string, number>>(() => load('reminders', {}));
+  const [hours, setHours] = useState<Record<string, Hours | null>>({});
+  const [pan, setPan] = useState(0);
   const [banner, setBanner] = useState<BannerState | null>(null);
   const [booting, setBooting] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   useEffect(() => save('settings', settings), [settings]);
   useEffect(() => save('queues', queues), [queues]);
   useEffect(() => save('alerts', alerts), [alerts]);
+  useEffect(() => save('reminders', reminders), [reminders]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = settings.theme ?? THEMES[0];
+  }, [settings.theme]);
   useEffect(() => save('page', page), [page]);
   useEffect(() => setSoundEnabled(settings.sound), [settings.sound]);
 
@@ -79,7 +103,7 @@ export default function App() {
   // reversed there by default. The System view can switch it either way.
   const flipCompass = settings.flipCompass ?? display.mode === 'glasses';
   const geo = useGeo(visible && settings.location);
-  const compass = useCompass(visible && (targetId !== null || page === 'radar' || display.dual), flipCompass);
+  const compass = useCompass(visible && (targetId !== null || page === 'radar' || page === 'sight' || display.layout !== 'single'), flipCompass);
   const course = geo.speed !== null && geo.speed > 0.7 ? geo.course : null;
   const heading = compass ?? course;
 
@@ -132,6 +156,18 @@ export default function App() {
     };
   }, [park?.id, visible, reload]);
 
+  // Opening hours change once a day, so they are fetched per park and cached.
+  useEffect(() => {
+    if (!park || !visible) return;
+    const id = park.id;
+    const controller = new AbortController();
+    fetchHours(id, controller.signal).then(
+      value => setHours(current => ({...current, [id]: value})),
+      () => {},
+    );
+    return () => controller.abort();
+  }, [park?.id, visible]);
+
   // Clock for the header and the data-age readout.
   useEffect(() => {
     if (!visible) return;
@@ -162,6 +198,10 @@ export default function App() {
     [rows],
   );
   const target = targetId ? rows.find(row => row.id === targetId) ?? null : null;
+  const shows = useMemo(() => upcomingShows(parkLive.set, now), [parkLive.set, now]);
+  // The sight view follows the wearer's head when there is a compass, and is panned by hand otherwise.
+  const sightLive = !origin?.remote && heading !== null;
+  const look = sightLive ? heading! : pan;
 
   const dataState: DataState = !parks
     ? parksFailed
@@ -179,14 +219,20 @@ export default function App() {
   // Cursor 0 is always the park switch in the header; the rest belong to the page.
   const maxCursor =
     page === 'system'
-      ? 5
+      ? 6
       : dataState !== 'ok'
         ? dataState === 'failed'
           ? 1
           : 0
         : page === 'overview'
           ? moves.length
-          : page === 'scan'
+          : page === 'shows'
+            ? shows.length
+            : page === 'sight'
+              ? blips.length
+                ? 1
+                : 0
+              : page === 'scan'
             ? SCAN_HEAD - 1 + scanRows.length
             : page === 'radar'
               ? blips.length
@@ -218,6 +264,7 @@ export default function App() {
   }, [scanRows]);
 
   const scanStart = useWindow(page === 'scan' ? cursor - SCAN_HEAD : -1, SCAN_PAGE, scanRows.length);
+  const showsStart = useWindow(page === 'shows' ? cursor - 1 : -1, SHOWS_PAGE, shows.length);
   const missionStart = useWindow(page === 'mission' ? cursor - 1 : -1, MISSION_PAGE, route.legs.length);
 
   // ---- Actions ------------------------------------------------------------
@@ -342,6 +389,35 @@ export default function App() {
     });
   }, [rows]);
 
+  const toggleReminder = useCallback(
+    (show: Show) => {
+      const has = reminders[show.id] === show.next;
+      setReminders(all => {
+        const copy = {...all};
+        if (has) delete copy[show.id];
+        else copy[show.id] = show.next;
+        return copy;
+      });
+      notify(has ? 'REMINDER CLEARED' : show.minutes > REMIND_MIN ? `REMINDER ${REMIND_MIN} MIN BEFORE: ${show.name}` : `REMINDER SET: ${show.name}`);
+      sound.select();
+    },
+    [reminders, notify],
+  );
+
+  // Fire a show reminder once its start is close, and drop any that have passed.
+  useEffect(() => {
+    const due = Object.entries(reminders).filter(([, start]) => start - now <= REMIND_MIN * 60000);
+    if (!due.length) return;
+    const [id, start] = due[0];
+    const name = shows.find(show => show.id === id)?.name;
+    if (name && start > now - 60000) {
+      const minutes = Math.max(0, Math.round((start - now) / 60000));
+      notify(`${name}: ${minutes ? `STARTS IN ${minutes} MIN` : 'STARTING NOW'}`, 'alert');
+      sound.alert();
+    }
+    setReminders(all => Object.fromEntries(Object.entries(all).filter(([key]) => !due.some(([dueId]) => dueId === key))));
+  }, [now, reminders]);
+
   // Arrival: announce once, and tick the ride off the mission.
   const arrived = target !== null && target.distance !== null && geo.state === 'ok' && target.distance <= ARRIVE_M;
   const arrivedAt = useRef<string | null>(null);
@@ -391,10 +467,12 @@ export default function App() {
         return;
       }
       const onRadar = page === 'radar' && cursor === 1;
+      const panning = page === 'sight' && cursor === 1 && !sightLive;
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
-          if (onRadar) setRadarIndex(Math.min(blips.length - 1, selected + 1));
+          if (panning) setPan(value => (value + PAN_STEP) % 360);
+          else if (onRadar) setRadarIndex(Math.min(blips.length - 1, selected + 1));
           else setCursor(cursor + 1);
           break;
         case 'ArrowUp':
@@ -414,13 +492,13 @@ export default function App() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [booting, targetId, page, cursor, selected, blips.length, setCursor, goPage, display.touch]);
+  }, [booting, targetId, page, cursor, selected, blips.length, setCursor, goPage, display.touch, sightLive]);
 
   // Focus follows the cursor, including on return from the target view.
   useEffect(() => {
     const selector = target ? `[data-target-action="${targetCursor}"]` : `[data-cursor="${cursor}"]`;
     document.querySelector<HTMLElement>(selector)?.focus({preventScroll: true});
-  }, [target?.id, targetCursor, page, cursor, scanStart, missionStart, dataState, scanRows, route.legs.length, moves.length]);
+  }, [target?.id, targetCursor, page, cursor, scanStart, missionStart, showsStart, shows.length, dataState, scanRows, route.legs.length, moves.length]);
 
   // ---- Voice --------------------------------------------------------------
   const voice = useRef<VoiceApi>(null!);
@@ -499,7 +577,7 @@ export default function App() {
     body = (
       <System
         {...common}
-        settings={{...settings, flipCompass}}
+        settings={{...settings, flipCompass, theme: settings.theme ?? THEMES[0]}}
         geo={geo}
         alertCount={Object.keys(alerts).length}
         dataState={dataState}
@@ -517,6 +595,11 @@ export default function App() {
         }}
         onCompass={() => {
           setSettings(current => ({...current, flipCompass: !flipCompass}));
+          sound.select();
+        }}
+        onTheme={() => {
+          const index = THEMES.indexOf(settings.theme ?? THEMES[0]);
+          setSettings(current => ({...current, theme: THEMES[(index + 1) % THEMES.length]}));
           sound.select();
         }}
         onClearAlerts={() => {
@@ -567,6 +650,22 @@ export default function App() {
       />
     );
     footer = `${String(Math.max(cursor - SCAN_HEAD + 1, 1)).padStart(2, '0')} / ${scanRows.length}`;
+  } else if (page === 'sight') {
+    body = <Sight {...common} blips={blips} look={look} live={sightLive} remote={origin?.remote ?? true} onLock={lockTarget} />;
+    const aimed = sighted(blips, look);
+    footer = aimed ? 'RIDE SIGHTED' : `${blips.length} IN RANGE`;
+  } else if (page === 'shows') {
+    body = (
+      <Shows
+        {...common}
+        shows={shows}
+        start={showsStart}
+        hours={hoursLabel(park ? hours[park.id] ?? null : null, now)}
+        reminders={reminders}
+        onRemind={toggleReminder}
+      />
+    );
+    footer = shows.length ? `${String(Math.max(cursor, 1)).padStart(2, '0')} / ${shows.length}` : 'NO SHOWS';
   } else if (page === 'radar') {
     body = (
       <Radar
@@ -606,7 +705,9 @@ export default function App() {
   const track =
     page === 'scan' && scanRows.length > SCAN_PAGE
       ? {start: scanStart / scanRows.length, size: SCAN_PAGE / scanRows.length}
-      : page === 'radar' && blips.length > 1
+      : page === 'shows' && shows.length > SHOWS_PAGE
+        ? {start: showsStart / shows.length, size: SHOWS_PAGE / shows.length}
+        : page === 'radar' && blips.length > 1
         ? {start: selected / blips.length, size: 1 / blips.length}
         : null;
 
@@ -642,7 +743,8 @@ export default function App() {
   // Second pane: the radar rides along with whatever the main pane shows, and the
   // overview takes its place while the main pane is the radar itself.
   let companion = null;
-  if (display.dual && dataState === 'ok') {
+  const hoursNow = hoursLabel(park ? hours[park.id] ?? null : null, now);
+  if (display.layout === 'dual' && dataState === 'ok') {
     const showRadar = target !== null || page !== 'radar';
     const tracked = target ? blips.findIndex(row => row.id === target.id) : -1;
     companion = (
@@ -683,6 +785,25 @@ export default function App() {
         <div className="slot" style={slot}>
           <div className="pane" style={pane} inert>
             {companion}
+          </div>
+        </div>
+      ) : null}
+      {display.layout === 'deck' ? (
+        <div className="slot" style={{width: display.deckWidth * display.scale, height: display.deckHeight * display.scale}}>
+          <div className="pane" style={{...pane, width: display.deckWidth, height: display.deckHeight}}>
+            <Deck
+              width={display.deckWidth}
+              height={display.deckHeight}
+              blips={blips}
+              focusId={target?.id ?? (page === 'radar' ? blips[selected]?.id ?? null : null)}
+              heading={origin?.remote ? null : heading}
+              target={target}
+              move={moves[0] ?? null}
+              show={shows[0] ?? null}
+              hours={hoursNow}
+              onLock={lockTarget}
+              onShows={() => showPage('shows')}
+            />
           </div>
         </div>
       ) : null}

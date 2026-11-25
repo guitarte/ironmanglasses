@@ -2,7 +2,8 @@ import {useEffect} from 'react';
 import type {Park} from './api';
 import {ageLabel} from './model';
 
-export const PAGES = ['overview', 'scan', 'radar', 'mission', 'system'] as const;
+export const PAGES = ['overview', 'scan', 'radar', 'sight', 'shows', 'mission', 'system'] as const;
+const TAB: Record<string, string> = {overview: 'HOME'};
 export type PageId = (typeof PAGES)[number];
 export type DataState = 'loading' | 'failed' | 'empty' | 'ok';
 export type BannerState = {text: string; tone: 'info' | 'alert'; key: number};
@@ -41,7 +42,7 @@ export function Header({page, parks, park, loading, failed, fetchedAt, now, onFo
             aria-current={id === page ? 'page' : undefined}
             onClick={onSelect ? () => onSelect(id) : undefined}
           >
-            {id}
+            {TAB[id] ?? id}
           </span>
         ))}
       </nav>
