@@ -5,7 +5,8 @@ import {buildRows, SORTS, type Sort} from './model';
 import {requestOrientation, useCompass, useGeo, useVisible, type OrientationPermission} from './sensors';
 import {TargetScreen} from './TargetScreen';
 
-const POLL_MS = 120000;
+// The source republishes every few minutes; 30 s keeps the display close behind it.
+const POLL_MS = 30000;
 
 type LiveState = {set: LiveSet | null; loading: boolean; failed: boolean};
 const EMPTY: LiveState = {set: null, loading: true, failed: false};
