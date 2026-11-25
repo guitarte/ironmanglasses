@@ -17,7 +17,7 @@ Back button.
 |---|---|---|
 | Swipe up / down | Move through rides | |
 | Swipe left / right | Switch park | |
-| Pinch (Enter) | On SORT: cycle shortest wait, nearest, A to Z. On a ride: lock it as the target | Rescan wait times |
+| Pinch (Enter) | On SORT: cycle wait time, nearest, A to Z. On AREA: cycle through the park's lands. On a ride: lock it as the target | Rescan wait times |
 | Back gesture (Escape) | | Return to the list |
 
 The target view shows straight-line distance, an estimated walk time, the ride's
@@ -30,6 +30,8 @@ otherwise draws north-up with a cardinal direction.
 - Wait times: [ThemeParks.wiki API](https://api.themeparks.wiki/docs/v1/), fetched
   from the browser every 30 seconds while the display is on. No key required.
   The last good reading is cached and marked with its age if the link drops.
+- Lands: the source has no land data, so `src/lands.ts` assigns each ride by name,
+  falling back to the land of the nearest known ride.
 - Attraction coordinates: baked into `public/parks.json` by
   `scripts/fetch-parks.mjs` during each deploy.
 

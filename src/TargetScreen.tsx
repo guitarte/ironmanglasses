@@ -75,7 +75,7 @@ export function TargetScreen({park, row, geo, heading, headingSource, fetchedAt,
     <main className="hud target" data-testid="target-screen">
       <header className="top">
         <div className="top-main">
-          <span className="eyebrow">TARGET LOCK  /  {park.key}</span>
+          <span className="eyebrow">TARGET LOCK  /  {row.land ?? park.key}</span>
           <h1 className="target-name">{row.name}</h1>
         </div>
       </header>

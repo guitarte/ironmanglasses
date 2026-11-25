@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {cachedLive, fetchLive, loadParks, type LiveSet, type Park} from './api';
-import {ListScreen, PAGE_SIZE} from './ListScreen';
-import {buildRows, SORTS, type Sort} from './model';
+import {HEAD, ListScreen, PAGE_SIZE} from './ListScreen';
+import {buildRows, landsPresent, SORTS, type Sort} from './model';
 import {requestOrientation, useCompass, useGeo, useVisible, type OrientationPermission} from './sensors';
 import {TargetScreen} from './TargetScreen';
 
@@ -25,6 +25,7 @@ export default function App() {
   const [parksFailed, setParksFailed] = useState(false);
   const [parkIndex, setParkIndex] = useState(storedPark);
   const [sort, setSort] = useState<Sort>('wait');
+  const [landByPark, setLandByPark] = useState<Record<string, string | null>>({});
   const [live, setLive] = useState<Record<string, LiveState>>({});
   const [targetId, setTargetId] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -85,21 +86,32 @@ export default function App() {
     return () => clearInterval(timer);
   }, [visible]);
 
+  const lands = useMemo(() => (park ? landsPresent(park, parkLive.set) : []), [park, parkLive.set]);
+  const chosen = park ? landByPark[park.id] ?? null : null;
+  // A land that stops reporting (or a stale choice) falls back to the whole park.
+  const land = chosen && lands.includes(chosen) ? chosen : null;
   const rows = useMemo(
-    () => (park ? buildRows(park, parkLive.set, geo, sort) : []),
-    [park, parkLive.set, geo.lat, geo.lon, sort],
+    () => (park ? buildRows(park, parkLive.set, geo, sort, land) : []),
+    [park, parkLive.set, geo.lat, geo.lon, sort, land],
   );
+  const cycleLand = useCallback(() => {
+    if (!park) return;
+    const options = [null, ...lands];
+    const next = options[(options.indexOf(land) + 1) % options.length];
+    setLandByPark(current => ({...current, [park.id]: next}));
+  }, [park, lands, land]);
   const target = targetId ? rows.find(row => row.id === targetId) ?? null : null;
 
-  // Cursor 0 is the sort control; rows follow. With no rows, 1 is Retry when shown.
+  // Cursors below HEAD are the sort and area controls; rows follow. With no rows,
+  // HEAD is Retry when shown.
   const showRetry = rows.length === 0 && (parksFailed || parkLive.failed);
-  const maxCursor = rows.length || (showRetry ? 1 : 0);
+  const maxCursor = HEAD - 1 + (rows.length || (showRetry ? 1 : 0));
   const focusedId = useRef<string | null>(null);
 
   const moveCursor = useCallback(
     (next: number) => {
       const clamped = Math.max(0, Math.min(maxCursor, next));
-      focusedId.current = clamped > 0 ? rows[clamped - 1]?.id ?? null : null;
+      focusedId.current = clamped >= HEAD ? rows[clamped - HEAD]?.id ?? null : null;
       setCursor(clamped);
     },
     [maxCursor, rows],
@@ -110,7 +122,7 @@ export default function App() {
     if (focusedId.current) {
       const index = rows.findIndex(row => row.id === focusedId.current);
       if (index >= 0) {
-        if (index + 1 !== cursor) setCursor(index + 1);
+        if (index + HEAD !== cursor) setCursor(index + HEAD);
         return;
       }
     }
@@ -119,9 +131,10 @@ export default function App() {
 
   const start = useRef(0);
   let windowStart = start.current;
-  if (cursor > 0) {
-    if (cursor - 1 < windowStart) windowStart = cursor - 1;
-    else if (cursor - 1 >= windowStart + PAGE_SIZE) windowStart = cursor - PAGE_SIZE;
+  if (cursor >= HEAD) {
+    const row = cursor - HEAD;
+    if (row < windowStart) windowStart = row;
+    else if (row >= windowStart + PAGE_SIZE) windowStart = row - PAGE_SIZE + 1;
   }
   windowStart = Math.max(0, Math.min(windowStart, Math.max(0, rows.length - PAGE_SIZE)));
   start.current = windowStart;
@@ -237,6 +250,8 @@ export default function App() {
       windowStart={windowStart}
       cursor={cursor}
       sort={sort}
+      land={land}
+      onLand={cycleLand}
       geo={geo}
       loading={!parks ? !parksFailed : parkLive.loading}
       failed={parksFailed || parkLive.failed}

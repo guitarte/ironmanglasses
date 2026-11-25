@@ -4,6 +4,8 @@ import {ageLabel, level, SORT_LABEL, statusLabel, type Row, type Sort} from './m
 import type {Geo} from './sensors';
 
 export const PAGE_SIZE = 6;
+/** Focus stops ahead of the rows: sort, then area. */
+export const HEAD = 2;
 
 type Props = {
   parks: Park[] | null;
@@ -12,6 +14,7 @@ type Props = {
   windowStart: number;
   cursor: number;
   sort: Sort;
+  land: string | null;
   geo: Geo;
   loading: boolean;
   failed: boolean;
@@ -20,12 +23,14 @@ type Props = {
   now: number;
   onFocusCursor: (cursor: number) => void;
   onSort: () => void;
+  onLand: () => void;
   onLock: (id: string) => void;
   onRetry: () => void;
 };
 
-function rowDetail(row: Row, geo: Geo): string {
+function rowDetail(row: Row, geo: Geo, filtered: boolean): string {
   const parts = [statusLabel(row.status)];
+  if (row.land && !filtered) parts.push(row.land);
   if (row.distance !== null && geo.lat !== null && geo.lon !== null && row.lat !== null && row.lon !== null) {
     const d = formatDistance(row.distance);
     parts.push(`${d.value} ${d.unit} ${cardinal(bearingDeg(geo.lat, geo.lon, row.lat, row.lon))}`);
@@ -78,17 +83,28 @@ export function ListScreen(props: Props) {
         </div>
       </header>
 
-      <button
-        type="button"
-        className="sort"
-        data-cursor="0"
-        onFocus={() => props.onFocusCursor(0)}
-        onClick={props.onSort}
-      >
-        <span className="sort-key">SORT</span>
-        <span className="sort-value">{SORT_LABEL[sort]}</span>
-        {note ? <span className="sort-note">{note}</span> : null}
-      </button>
+      <div className="controls">
+        <button
+          type="button"
+          className="sort"
+          data-cursor="0"
+          onFocus={() => props.onFocusCursor(0)}
+          onClick={props.onSort}
+        >
+          <span className="sort-key">SORT</span>
+          <span className={`sort-value ${note ? 'is-note' : ''}`}>{note ?? SORT_LABEL[sort]}</span>
+        </button>
+        <button
+          type="button"
+          className="sort"
+          data-cursor="1"
+          onFocus={() => props.onFocusCursor(1)}
+          onClick={props.onLand}
+        >
+          <span className="sort-key">AREA</span>
+          <span className="sort-value">{props.land ?? 'ALL'}</span>
+        </button>
+      </div>
 
       <section className="rows" aria-label="Attractions">
         {shown.map((row, offset) => {
@@ -99,13 +115,13 @@ export function ListScreen(props: Props) {
               type="button"
               key={row.id}
               className={`row tone-${tone}`}
-              data-cursor={index + 1}
-              onFocus={() => props.onFocusCursor(index + 1)}
+              data-cursor={index + HEAD}
+              onFocus={() => props.onFocusCursor(index + HEAD)}
               onClick={() => props.onLock(row.id)}
             >
               <span className="row-text">
                 <span className="row-name">{row.name}</span>
-                <span className="row-detail">{rowDetail(row, geo)}</span>
+                <span className="row-detail">{rowDetail(row, geo, props.land !== null)}</span>
               </span>
               <span className="row-wait">
                 {row.status === 'OPERATING' && row.wait !== null ? (
@@ -126,7 +142,7 @@ export function ListScreen(props: Props) {
               <>
                 <p>NO DATA LINK</p>
                 <p className="empty-sub">Wait times could not be reached.</p>
-                <button type="button" className="action" data-cursor="1" onClick={props.onRetry}>
+                <button type="button" className="action" data-cursor={HEAD} onClick={props.onRetry}>
                   RETRY
                 </button>
               </>
@@ -143,7 +159,7 @@ export function ListScreen(props: Props) {
       </section>
 
       <footer className="foot">
-        <span>{rows.length ? `${String(Math.max(cursor, 1)).padStart(2, '0')} / ${rows.length}` : '-- / --'}</span>
+        <span>{rows.length ? `${String(Math.max(cursor - HEAD + 1, 1)).padStart(2, '0')} / ${rows.length}` : '-- / --'}</span>
         <span className="track" aria-hidden="true">
           {rows.length > PAGE_SIZE ? (
             <i
