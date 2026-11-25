@@ -1447,3 +1447,97 @@ button:focus {
     stroke-dashoffset: 0;
   }
 }
+
+/* ---- Phones ------------------------------------------------------------- */
+/* On a touch screen the same 600 px panes are scaled to fit, one or two at a time. */
+.safe-probe {
+  position: fixed;
+  inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html:not([data-display='glasses']),
+html:not([data-display='glasses']) body {
+  min-width: 0;
+  min-height: 0;
+  height: 100dvh;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html:not([data-display='glasses']) #root {
+  position: fixed;
+  inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+}
+
+.stage.is-vertical {
+  flex-direction: column;
+}
+
+.slot {
+  position: relative;
+  flex: none;
+}
+
+.pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 600px;
+  height: 600px;
+  overflow: hidden;
+  transform-origin: 0 0;
+}
+
+.companion .top {
+  padding: 6px 12px 10px;
+  border-bottom: 2px solid var(--c-dim);
+}
+
+.companion .contact {
+  border-color: var(--c-dim);
+}
+
+html:not([data-display='glasses']) .tabs span {
+  padding-top: 8px;
+  cursor: pointer;
+}
+
+.phone-back {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  z-index: 4;
+  padding: 6px 12px;
+  border: 2px solid var(--c-dim);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c);
+}
+
+.companion .contact-hint {
+  display: none;
+}
+
+html:not([data-display='glasses']) .contact-hint::before {
+  content: 'TAP OR ';
+}

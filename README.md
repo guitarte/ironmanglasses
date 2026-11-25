@@ -38,6 +38,24 @@ When Meta AI's WebMCP bridge is present the app registers voice tools: park
 status, ride waits, navigate to a ride, recommend the next ride, set an alert, add
 rides to the mission, and switch park.
 
+## On a phone
+
+Open the same URL on a phone and the app switches to a touch layout by itself. It
+treats any touch screen that is not the glasses' 600 px square as a phone, scales
+the HUD panes to fit, and re-measures on every resize, which is what a folding
+phone reports when it opens or closes.
+
+- **Folded iPhone Duo, or a small phone:** one pane.
+- **Unfolded iPhone Duo, or a tall phone:** two panes. The second is a linked
+  display that shows the radar (tracking the locked ride while navigating), or the
+  overview while the main pane is the radar. Panes sit side by side in landscape
+  and stack in portrait.
+
+Tap the view tabs or swipe sideways to change view, drag up or down to move through
+a list, tap to select, and use the BACK button or a rightward swipe to leave a
+target lock. Add it to the Home Screen from Safari's share sheet to run it full
+screen. Append `?mode=glasses`, `?mode=phone` or `?mode=duo` to force a layout.
+
 ## Data
 
 - Wait times: [ThemeParks.wiki API](https://api.themeparks.wiki/docs/v1/), fetched
