@@ -13,23 +13,38 @@ Back button.
 
 ## Using it
 
-| Input | Wait list | Target view |
-|---|---|---|
-| Swipe up / down | Move through rides | |
-| Swipe left / right | Switch park | |
-| Pinch (Enter) | On SORT: cycle shortest wait, nearest, A to Z. On a ride: lock it as the target | Rescan wait times |
-| Back gesture (Escape) | | Return to the list |
+Swipe left or right to move between five views. Swipe up or down to move through
+the controls in a view, and pinch to act. The back gesture leaves a target lock.
 
-The target view shows straight-line distance, an estimated walk time, the ride's
-current wait, and an arrow toward it. The arrow uses the glasses' compass when
-available, falls back to GPS direction of travel while you are walking, and
-otherwise draws north-up with a cardinal direction.
+| View | What it shows |
+|---|---|
+| OVERVIEW | Crowd gauge, average wait by land, and the three best rides to do next (wait plus walk, weighted toward headline rides and rides well below today's peak) |
+| SCAN | Every ride with its wait, trend arrow, and land. Pinch SORT or AREA to cycle them, pinch a ride to lock it |
+| RADAR | A scope of rides around you, coloured by wait. Swipe up or down to step through contacts, pinch to lock |
+| MISSION | Your ride queue, ordered into a walking route with total walk and queue time. Arriving at a ride ticks it off |
+| SYSTEM | Sound, location, alert and trend controls, plus voice command examples |
+
+Locking a ride opens the target view: distance, walk time, current wait, a trend
+sparkline, today's peak, and an arrow toward the ride. The arrow uses the glasses'
+compass when available, falls back to GPS direction of travel, and otherwise draws
+north-up. From there you can add the ride to the mission, set an alert for when its
+wait drops below a threshold (or when it reopens), or rescan.
+
+Location is only requested after you pinch something that needs it. Trends, the
+mission, and alerts are stored on the device in `localStorage`. Alerts fire while
+the app is open.
+
+When Meta AI's WebMCP bridge is present the app registers voice tools: park
+status, ride waits, navigate to a ride, recommend the next ride, set an alert, add
+rides to the mission, and switch park.
 
 ## Data
 
 - Wait times: [ThemeParks.wiki API](https://api.themeparks.wiki/docs/v1/), fetched
   from the browser every 30 seconds while the display is on. No key required.
   The last good reading is cached and marked with its age if the link drops.
+- Lands: the source has no land data, so `src/lands.ts` assigns each ride by name,
+  falling back to the land of the nearest known ride.
 - Attraction coordinates: baked into `public/parks.json` by
   `scripts/fetch-parks.mjs` during each deploy.
 
