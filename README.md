@@ -28,7 +28,7 @@ otherwise draws north-up with a cardinal direction.
 ## Data
 
 - Wait times: [ThemeParks.wiki API](https://api.themeparks.wiki/docs/v1/), fetched
-  from the browser every two minutes while the display is on. No key required.
+  from the browser every 30 seconds while the display is on. No key required.
   The last good reading is cached and marked with its age if the link drops.
 - Attraction coordinates: baked into `public/parks.json` by
   `scripts/fetch-parks.mjs` during each deploy.
@@ -51,9 +51,9 @@ node <toolkit>/plugins/meta-wearables-webapp/skills/ai-glasses-webapp-test/scrip
 
 ## Deploy
 
-Pushing to `main` builds and publishes to GitHub Pages through
-`.github/workflows/pages.yml`. One-time setup: in the repository's
-**Settings > Pages**, set **Source** to **GitHub Actions**.
+Pushing to `main` builds the site and publishes it to the `gh-pages` branch
+through `.github/workflows/pages.yml`. GitHub Pages serves that branch
+(**Settings > Pages > Source: Deploy from a branch, `gh-pages` / root**).
 
 ## Add to the glasses
 

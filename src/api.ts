@@ -17,7 +17,7 @@ const clean = (name: string) => name.replace(/[™®©]/g, '').replace(/\s+/g, '
 
 async function getJson(url: string, signal: AbortSignal): Promise<any> {
   const timeout = AbortSignal.timeout(TIMEOUT_MS);
-  const response = await fetch(url, {signal: AbortSignal.any([signal, timeout])});
+  const response = await fetch(url, {cache: 'no-store', signal: AbortSignal.any([signal, timeout])});
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
