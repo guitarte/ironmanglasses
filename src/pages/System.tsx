@@ -5,7 +5,8 @@ import {VOICE_EXAMPLES, voiceAvailable} from '../voice';
 type Props = {
   cursor: number;
   onFocusCursor: (cursor: number) => void;
-  settings: {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string; flat?: boolean};
+  settings: {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string; flat?: boolean; head?: boolean; glance?: boolean};
+  hasPin: boolean;
   geo: Geo;
   alertCount: number;
   dataState: DataState;
@@ -15,6 +16,9 @@ type Props = {
   onCompass: () => void;
   onTheme: () => void;
   onFlat: () => void;
+  onHead: () => void;
+  onGlance: () => void;
+  onPin: () => void;
   onClearAlerts: () => void;
   onResetTrends: () => void;
 };
@@ -40,6 +44,9 @@ export function System(props: Props) {
     ['COMPASS', settings.flipCompass ? 'REVERSED' : 'NORMAL', !!settings.flipCompass, props.onCompass],
     ['THEME', (settings.theme ?? THEMES[0]).toUpperCase(), true, props.onTheme],
     ['3D VIEWS', settings.flat ? 'OFF' : 'ON', !settings.flat, props.onFlat],
+    ['HEAD CONTROL', settings.head ? 'ON' : 'OFF', !!settings.head, props.onHead],
+    ['GLANCE MODE', settings.glance === false ? 'OFF' : 'ON', settings.glance !== false, props.onGlance],
+    ['MY PIN', props.hasPin ? 'GO TO' : 'DROP', props.hasPin, props.onPin],
   ];
   const voice = voiceAvailable();
   return (
@@ -61,7 +68,6 @@ export function System(props: Props) {
       </div>
       <section className="voice" aria-label="Voice commands">
         <span className="eyebrow">{`VOICE LINK  /  ${voice ? 'ACTIVE' : 'NOT ENABLED ON THIS DEVICE'}`}</span>
-        <p className="hint">Ask Meta AI while this app is open:</p>
         <ul>
           {VOICE_EXAMPLES.map(example => (
             <li key={example}>{example}</li>

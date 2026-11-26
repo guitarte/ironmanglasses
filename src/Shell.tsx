@@ -56,7 +56,13 @@ export function Header({page, parks, park, loading, failed, fetchedAt, now, onFo
           </span>
         </button>
         <div className="top-side">
-          <span className={`link ${failed ? 'is-bad' : loading ? 'is-busy' : ''}`}>{status}</span>
+          <span className={`link ${failed ? 'is-bad' : loading ? 'is-busy' : ''}`}>
+            {/* Drains over the 30 seconds until the next refresh. */}
+            <svg key={fetchedAt ?? 0} className="sync-ring" viewBox="-10 -10 20 20" aria-hidden="true">
+              <circle r="7" pathLength="100" />
+            </svg>
+            {status}
+          </span>
           <span className="clock">{clock}</span>
         </div>
       </div>
@@ -64,13 +70,23 @@ export function Header({page, parks, park, loading, failed, fetchedAt, now, onFo
   );
 }
 
-export function Footer({text, track}: {text: string; track: {start: number; size: number} | null}) {
+export function Footer({text, track, ticker = []}: {text: string; track: {start: number; size: number} | null; ticker?: string[]}) {
   return (
     <footer className="foot">
       <span>{text}</span>
-      <span className="track" aria-hidden="true">
-        {track ? <i style={{left: `${track.start * 100}%`, width: `${track.size * 100}%`}} /> : null}
-      </span>
+      {track || !ticker.length ? (
+        <span className="track" aria-hidden="true">
+          {track ? <i style={{left: `${track.start * 100}%`, width: `${track.size * 100}%`}} /> : null}
+        </span>
+      ) : (
+        <span className="ticker" aria-hidden="true">
+          <span className="ticker-run" style={{animationDuration: `${Math.max(14, ticker.join('').length * 0.22)}s`}}>
+            {ticker.map((item, index) => (
+              <span key={index}>{item}</span>
+            ))}
+          </span>
+        </span>
+      )}
       <span>◂ VIEW ▸</span>
     </footer>
   );
@@ -142,5 +158,19 @@ export function Boot({onDone}: {onDone: () => void}) {
         <span>PARK HUD ONLINE</span>
       </div>
     </div>
+  );
+}
+
+/** Tick rails down both edges of the frame; the left one carries a marker for the list position. */
+export function Rails({position}: {position: number | null}) {
+  return (
+    <>
+      <i className="rail rail-left" aria-hidden="true">
+        {position !== null ? <b style={{top: `${Math.max(0, Math.min(1, position)) * 100}%`}} /> : null}
+      </i>
+      <i className="rail rail-right" aria-hidden="true">
+        <b />
+      </i>
+    </>
   );
 }

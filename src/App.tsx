@@ -2,17 +2,23 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {bestMoves, planRoute} from './advisor';
 import {cachedLive, fetchHours, fetchLive, loadParks, type Hours, type LiveSet, type Park} from './api';
 import {Deck} from './Deck';
+import {Flight, requestMotion} from './Flight';
 import {PANE, useDisplay, useTouchPad} from './display';
+import {useHeadGestures} from './head';
 import {clearHistory, recordHistory} from './history';
 import {
   buildRows,
+  headlines,
   hoursLabel,
+  PIN_ID,
+  pinRow,
   landsPresent,
   originFor,
   parkStats,
   sortRows,
   SORTS,
   upcomingShows,
+  type Pin,
   type Row,
   type Show,
   type Sort,
@@ -26,7 +32,7 @@ import {Shows, SHOWS_PAGE} from './pages/Shows';
 import {Sight, sighted} from './pages/Sight';
 import {System, THEMES} from './pages/System';
 import {requestOrientation, useCompass, useGeo, useVisible, type OrientationPermission} from './sensors';
-import {Banner, Boot, Footer, Header, PAGES, StatePanel, type BannerState, type DataState, type PageId} from './Shell';
+import {Banner, Boot, Footer, Header, PAGES, Rails, StatePanel, type BannerState, type DataState, type PageId} from './Shell';
 import {setSoundEnabled, sound} from './sound';
 import {load, save} from './store';
 import {ALERT_STEPS, TARGET_ACTIONS, TargetScreen} from './TargetScreen';
@@ -36,10 +42,12 @@ const POLL_MS = 30000;
 const ARRIVE_M = 35;
 const REMIND_MIN = 15;
 const PAN_STEP = 30;
+const GLANCE_MS = 10000;
+const DWELL_MS = 2600;
 
 type LiveState = {set: LiveSet | null; loading: boolean; failed: boolean};
 const EMPTY: LiveState = {set: null, loading: true, failed: false};
-type Settings = {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string; flat?: boolean};
+type Settings = {sound: boolean; location: boolean; flipCompass?: boolean; theme?: string; flat?: boolean; head?: boolean; glance?: boolean};
 /** How the incoming screen arrives: from a side, back out of a target lock, or flipped to another park. */
 type Arrival = 'right' | 'left' | 'back' | 'flip';
 export type AlertRule = number | 'open';
@@ -87,6 +95,10 @@ export default function App() {
   const [reminders, setReminders] = useState<Record<string, number>>(() => load('reminders', {}));
   const [hours, setHours] = useState<Record<string, Hours | null>>({});
   const [pan, setPan] = useState(0);
+  const [pin, setPin] = useState<Pin | null>(() => load('pin', null));
+  const [glance, setGlance] = useState(false);
+  const [flying, setFlying] = useState(false);
+  const lastInput = useRef(0);
   const [banner, setBanner] = useState<BannerState | null>(null);
   const [booting, setBooting] = useState(() => !matchMedia('(prefers-reduced-motion: reduce)').matches);
 
@@ -94,6 +106,7 @@ export default function App() {
   useEffect(() => save('queues', queues), [queues]);
   useEffect(() => save('alerts', alerts), [alerts]);
   useEffect(() => save('reminders', reminders), [reminders]);
+  useEffect(() => save('pin', pin), [pin]);
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme ?? THEMES[0];
   }, [settings.theme]);
@@ -203,12 +216,15 @@ export default function App() {
     const queued = queue.map(id => rows.find(row => row.id === id)).filter((row): row is Row => !!row);
     return origin ? planRoute(queued, origin) : {legs: [], walk: 0, wait: 0, total: 0};
   }, [queue, rows, origin]);
+  const waypoint = useMemo(() => (pin && origin ? pinRow(pin, geo, origin) : null), [pin, origin, geo.lat, geo.lon]);
   const blips = useMemo(
-    () => rows.filter(row => row.range !== null).sort((a, b) => a.range! - b.range!),
-    [rows],
+    () => [...rows, ...(waypoint ? [waypoint] : [])].filter(row => row.range !== null).sort((a, b) => a.range! - b.range!),
+    [rows, waypoint],
   );
-  const target = targetId ? rows.find(row => row.id === targetId) ?? null : null;
+  const target = targetId ? (targetId === PIN_ID ? waypoint : rows.find(row => row.id === targetId) ?? null) : null;
   const shows = useMemo(() => upcomingShows(parkLive.set, now), [parkLive.set, now]);
+  const hoursNow = hoursLabel(park ? hours[park.id] ?? null : null, now);
+  const ticker = useMemo(() => headlines(rows, shows, hoursNow), [rows, shows, hoursNow?.head, hoursNow?.detail]);
   // The sight view follows the wearer's head when there is a compass, and is panned by hand otherwise.
   const sightLive = !origin?.remote && heading !== null;
   const look = sightLive ? heading! : pan;
@@ -229,7 +245,7 @@ export default function App() {
   // Cursor 0 is always the park switch in the header; the rest belong to the page.
   const maxCursor =
     page === 'system'
-      ? 7
+      ? 10
       : dataState !== 'ok'
         ? dataState === 'failed'
           ? 1
@@ -353,6 +369,12 @@ export default function App() {
 
   const cycleAlert = useCallback(
     (row: Row) => {
+      if (row.id === PIN_ID) {
+        setPin(null);
+        notify('PIN CLEARED');
+        history.back();
+        return;
+      }
       const current = alerts[row.id];
       let next: AlertRule | undefined;
       if (row.status !== 'OPERATING') next = current === 'open' ? undefined : 'open';
@@ -450,6 +472,7 @@ export default function App() {
   useEffect(() => {
     if (history.state?.target) history.replaceState(null, '');
     const onPop = () => {
+      setFlying(false);
       setTargetId(null);
       setArrival('back');
       sound.back();
@@ -458,9 +481,52 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Glance mode: on the see-through display, a locked target fades to just the arrow and
+  // distance after a few seconds without input, leaving the view ahead clear.
+  const glanceOn = settings.glance !== false && display.mode === 'glasses';
+  useEffect(() => {
+    setGlance(false);
+    if (targetId === null || flying || !glanceOn || !visible) return;
+    lastInput.current = Date.now();
+    const timer = setInterval(() => setGlance(Date.now() - lastInput.current >= GLANCE_MS), 1000);
+    return () => clearInterval(timer);
+  }, [targetId, flying, glanceOn, visible]);
+
+  // A pin asked for before the first position fix drops as soon as the fix arrives.
+  const pinPending = useRef(0);
+  useEffect(() => {
+    if (!pinPending.current || geo.state !== 'ok' || geo.lat === null || geo.lon === null) return;
+    const fresh = Date.now() - pinPending.current < 60000;
+    pinPending.current = 0;
+    if (!fresh || pin) return;
+    setPin({lat: geo.lat, lon: geo.lon, at: Date.now()});
+    notify('PIN DROPPED HERE');
+  }, [geo.state, geo.lat, geo.lon]);
+
+  // Head control: flick the head to change view, nod to pinch.
+  useHeadGestures(visible && !!settings.head && orientation === 'granted', gesture => {
+    if (gesture === 'nod') (document.activeElement as HTMLElement | null)?.click();
+    else document.dispatchEvent(new KeyboardEvent('keydown', {key: gesture === 'flick-right' ? 'ArrowRight' : 'ArrowLeft', bubbles: true, cancelable: true}));
+  });
+
+  // Gaze lock: with head control on, holding a ride in the sight view locks it.
+  const gazeId = page === 'sight' && targetId === null && sightLive && settings.head ? sighted(blips, look)?.id ?? null : null;
+  useEffect(() => {
+    if (!gazeId) return;
+    const timer = setTimeout(() => lockTarget(gazeId, false), DWELL_MS);
+    return () => clearTimeout(timer);
+  }, [gazeId]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (booting) setBooting(false);
+      lastInput.current = Date.now();
+      if (glance) {
+        // The first input only wakes the display.
+        setGlance(false);
+        event.preventDefault();
+        return;
+      }
       if (targetId !== null) {
         if (event.key === 'Escape') {
           event.preventDefault();
@@ -504,13 +570,13 @@ export default function App() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [booting, targetId, page, cursor, selected, blips.length, setCursor, goPage, display.touch, sightLive]);
+  }, [booting, glance, targetId, page, cursor, selected, blips.length, setCursor, goPage, display.touch, sightLive]);
 
   // Focus follows the cursor, including on return from the target view.
   useEffect(() => {
-    const selector = target ? `[data-target-action="${targetCursor}"]` : `[data-cursor="${cursor}"]`;
+    const selector = target ? `[data-target-action="${flying ? 0 : targetCursor}"]` : `[data-cursor="${cursor}"]`;
     document.querySelector<HTMLElement>(selector)?.focus({preventScroll: true});
-  }, [target?.id, targetCursor, page, cursor, scanStart, missionStart, showsStart, shows.length, dataState, scanRows, route.legs.length, moves.length]);
+  }, [target?.id, flying, targetCursor, page, cursor, scanStart, missionStart, showsStart, shows.length, dataState, scanRows, route.legs.length, moves.length]);
 
   // ---- Voice --------------------------------------------------------------
   const voice = useRef<VoiceApi>(null!);
@@ -551,7 +617,14 @@ export default function App() {
   let primary;
   let body;
   let footer = '';
-  if (target && park) {
+  if (target && park && flying) {
+    primary = (
+      <>
+        <Flight rideId={target.id} rideName={target.name} onEnd={() => setFlying(false)} />
+        {overlay}
+      </>
+    );
+  } else if (target && park) {
     primary = (
       <>
         <TargetScreen
@@ -565,14 +638,24 @@ export default function App() {
           arrived={arrived}
           queued={queue.includes(target.id)}
           alert={alerts[target.id]}
+          glance={glance}
+          alertLabel={target.id === PIN_ID ? 'CLEAR PIN' : undefined}
           fetchedAt={parkLive.set?.fetchedAt ?? null}
           loading={parkLive.loading}
           failed={parkLive.failed}
           now={now}
           onFocusAction={setTargetCursor}
-          onQueue={() => toggleQueue(target.id, target.name)}
+          onQueue={() => (target.id === PIN_ID ? notify('A PIN CANNOT JOIN A MISSION') : toggleQueue(target.id, target.name))}
           onAlert={() => cycleAlert(target)}
           onRescan={refresh}
+          onFlight={() => {
+            // Motion access has to be requested from this pinch.
+            requestMotion();
+            if (orientation !== 'granted') requestOrientation().then(setOrientation);
+            setTargetCursor(0);
+            setFlying(true);
+            sound.lock();
+          }}
         />
         {display.touch ? (
           <button type="button" className="phone-back" onClick={() => history.back()}>
@@ -608,6 +691,34 @@ export default function App() {
         onCompass={() => {
           setSettings(current => ({...current, flipCompass: !flipCompass}));
           sound.select();
+        }}
+        hasPin={pin !== null}
+        onHead={() => {
+          const next = !settings.head;
+          setSettings(current => ({...current, head: next}));
+          // Reading head motion needs the same permission as the compass, asked for on this pinch.
+          if (next && orientation !== 'granted') requestOrientation().then(setOrientation);
+          notify(next ? 'HEAD CONTROL ON: FLICK TO TURN PAGES, NOD TO PINCH' : 'HEAD CONTROL OFF');
+          sound.select();
+        }}
+        onGlance={() => {
+          setSettings(current => ({...current, glance: current.glance === false}));
+          sound.select();
+        }}
+        onPin={() => {
+          if (pin) {
+            lockTarget(PIN_ID);
+            return;
+          }
+          if (geo.state === 'ok' && geo.lat !== null && geo.lon !== null) {
+            setPin({lat: geo.lat, lon: geo.lon, at: Date.now()});
+            notify('PIN DROPPED HERE');
+            sound.lock();
+          } else {
+            setSettings(current => (current.location ? current : {...current, location: true}));
+            pinPending.current = Date.now();
+            notify('FINDING YOUR POSITION: THE PIN DROPS WHEN IT IS FOUND');
+          }
         }}
         onFlat={() => {
           setSettings(current => ({...current, flat: !current.flat}));
@@ -667,7 +778,7 @@ export default function App() {
     );
     footer = `${String(Math.max(cursor - SCAN_HEAD + 1, 1)).padStart(2, '0')} / ${scanRows.length}`;
   } else if (page === 'sight') {
-    body = <Sight {...common} blips={blips} look={look} live={sightLive} remote={origin?.remote ?? true} onLock={lockTarget} />;
+    body = <Sight {...common} blips={blips} look={look} live={sightLive} remote={origin?.remote ?? true} dwell={!!settings.head && sightLive} onLock={lockTarget} />;
     const aimed = sighted(blips, look);
     footer = aimed ? 'RIDE SIGHTED' : `${blips.length} IN RANGE`;
   } else if (page === 'shows') {
@@ -791,7 +902,8 @@ export default function App() {
           {body}
         </div>
         {entering ? <i key={`wipe-${page}-${park?.id ?? ''}`} className={`wipe wipe-${arrival}`} aria-hidden="true" /> : null}
-        <Footer text={footer} track={track} />
+        <Footer text={footer} track={track} ticker={ticker} />
+        <Rails position={track ? track.start + track.size / 2 : null} />
       </main>
       {overlay}
       {boot}
@@ -804,7 +916,6 @@ export default function App() {
   // Second pane: the radar rides along with whatever the main pane shows, and the
   // overview takes its place while the main pane is the radar itself.
   let companion = null;
-  const hoursNow = hoursLabel(park ? hours[park.id] ?? null : null, now);
   if (display.layout === 'dual' && dataState === 'ok') {
     const showRadar = target !== null || page !== 'radar';
     const tracked = target ? blips.findIndex(row => row.id === target.id) : -1;

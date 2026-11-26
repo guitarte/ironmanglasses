@@ -11,6 +11,8 @@ type Props = {
   /** The view follows the wearer's head; otherwise it is panned by hand. */
   live: boolean;
   remote: boolean;
+  /** Holding the gaze on a ride locks it; draws the countdown ring. */
+  dwell: boolean;
   onLock: (id: string) => void;
 };
 
@@ -40,7 +42,7 @@ export function sighted(blips: Row[], look: number): Row | null {
 }
 
 /** A look-around view: rides are drawn along the horizon in the direction they really are. */
-export function Sight({blips, look, live, remote, onFocusCursor, onLock}: Props) {
+export function Sight({blips, look, live, remote, dwell, onFocusCursor, onLock}: Props) {
   const aimed = sighted(blips, look);
   const inView = blips
     .map(row => ({row, offset: angleDelta(row.bearing!, look)}))
@@ -91,6 +93,7 @@ export function Sight({blips, look, live, remote, onFocusCursor, onLock}: Props)
             <g key={row.id} className={`sight-mark tone-${level(row)} ${on ? 'is-aimed' : ''}`}>
               <line className="stem" x1={x} x2={x} y1={TAPE} y2={y} />
               <circle cx={x} cy={y} r={on ? 9 : Math.max(4, 7 - lane)} />
+              {on && dwell ? <circle key={row.id} className="dwell" cx={x} cy={y} r="24" pathLength="100" /> : null}
               {on ? <path className="bracket" d={`M${x - 16},${y - 8}v-8h8M${x + 8},${y - 16}h8v8M${x + 16},${y + 8}v8h-8M${x - 8},${y + 16}h-8v-8`} /> : null}
               <text x={x + (right ? 22 : -22)} y={y - 2} textAnchor={right ? 'start' : 'end'} style={{fontSize: size}}>
                 {short(row.name, Math.max(6, Math.floor(((right ? WIDTH - x : x) - 26) / (size * 0.64))))}
@@ -125,7 +128,7 @@ export function Sight({blips, look, live, remote, onFocusCursor, onLock}: Props)
       </button>
       <p className="eyebrow sight-note">
         {`${note}  /  ${cardinal(look)} ${String(Math.round(((look % 360) + 360) % 360)).padStart(3, '0')}`}
-        {live ? '' : '  /  SWIPE DOWN TO PAN'}
+        {live ? (dwell ? '  /  HOLD GAZE TO LOCK' : '') : '  /  SWIPE DOWN TO PAN'}
       </p>
     </div>
   );

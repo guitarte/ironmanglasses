@@ -1,3 +1,4 @@
+import {Count} from './Count';
 import {useMemo} from 'react';
 import type {Park} from './api';
 import type {AlertRule} from './App';
@@ -18,6 +19,10 @@ type Props = {
   arrived: boolean;
   queued: boolean;
   alert: AlertRule | undefined;
+  /** Peripheral mode: everything but the arrow and distance fades so the view ahead stays clear. */
+  glance: boolean;
+  /** Replaces the alert action's label, for a target that is not a ride. */
+  alertLabel?: string;
   fetchedAt: number | null;
   loading: boolean;
   failed: boolean;
@@ -26,6 +31,8 @@ type Props = {
   onQueue: () => void;
   onAlert: () => void;
   onRescan: () => void;
+  /** Opens the on-ride flight display. */
+  onFlight: () => void;
 };
 
 function geoMessage(geo: Geo, hasPlace: boolean): string | null {
@@ -109,12 +116,12 @@ export function TargetScreen(props: Props) {
   }
   const actions: [label: string, on: boolean, action: () => void][] = [
     [props.queued ? 'IN MISSION' : 'MISSION +', props.queued, props.onQueue],
-    [alertLabel, props.alert !== undefined, props.onAlert],
-    [loading ? 'SCANNING' : 'RESCAN', false, props.onRescan],
+    [props.alertLabel ?? alertLabel, props.alert !== undefined, props.onAlert],
+    ['RIDE HUD', false, props.onFlight],
   ];
 
   return (
-    <main className="hud target" data-testid="target-screen">
+    <main className={`hud target ${props.glance ? 'is-glance' : ''}`} data-testid="target-screen">
       <header className="top target-top">
         <span className="eyebrow">TARGET LOCK  /  {row.land ?? park.key}</span>
         <h1 className="target-name">{row.name}</h1>
@@ -125,7 +132,9 @@ export function TargetScreen(props: Props) {
           <span className="eyebrow">WAIT</span>
           {row.status === 'OPERATING' && row.wait !== null ? (
             <>
-              <b>{row.wait}</b>
+              <b>
+                <Count value={row.wait} />
+              </b>
               <small>MIN</small>
             </>
           ) : (

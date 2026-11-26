@@ -52,6 +52,40 @@ Screens change with a scan-bar wipe and cascading rows, a target lock opens like
 iris, and switching park flips the view. With reduced motion set, these become a
 plain cross-fade and the 3D views stop animating.
 
+## Ride displays
+
+Lock a ride and choose **RIDE HUD** to open an on-ride display driven by the
+motion sensors. It needs no input once open: the clock starts when the ride
+moves and stops when the motion settles, and your best peak for each ride is
+remembered. Each kind of ride gets its own original instrument panel and colours:
+
+| Display | Rides | Instrument |
+| --- | --- | --- |
+| Starflight deck | Space Mountain | Artificial horizon |
+| Mine train gauges | Big Thunder Mountain | Artificial horizon |
+| Alpine sled computer | Matterhorn | Artificial horizon |
+| Launch telemetry | Incredicoaster and other coasters | Artificial horizon |
+| Race day dash | Radiator Springs Racers, Autopia | Artificial horizon |
+| Drop shaft monitor | Mission: Breakout and other drops | Weightlessness gauge |
+| River run log | Bayou Adventure, Grizzly River Run, Pirates | Weightlessness gauge |
+| Expedition seismograph | Indiana Jones Adventure | Shake rings |
+| Cockpit motion deck | Smugglers Run, Star Tours, Soarin' and similar | Shake rings |
+| Dark ride drift meter | Haunted Mansion and Fantasyland dark rides | Shake rings |
+
+Any other ride gets a general telemetry display. Follow the ride's own rules
+about loose articles and glasses.
+
+## Hands-free and head-worn extras
+
+- **Head control** (System): flick your head left or right to change view and
+  nod to pinch. In the sight view, holding your gaze on a ride locks it.
+- **Glance mode** (System, glasses only): ten seconds after you lock a ride the
+  display fades to just the compass and the turn cue. Any input wakes it.
+- **My pin** (System): drop a pin where you are standing, such as a parked
+  stroller or a meeting spot, then navigate back to it like any ride.
+- The footer carries a ticker of park headlines, and the ring by the clock
+  drains until the next refresh.
+
 ## On a phone
 
 Open the same URL on a phone and the app switches to a touch layout by itself. It
