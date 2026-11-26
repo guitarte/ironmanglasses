@@ -1,3 +1,4 @@
+import {Count} from '../Count';
 import type {Pick} from '../advisor';
 import {LAND_CODE} from '../lands';
 import {level, type ParkStats} from '../model';
@@ -32,7 +33,7 @@ export function Overview({stats, moves, remote, onFocusCursor, onLock}: Props) {
             ))}
           </svg>
           <div className="crowd-read">
-            <b>{stats.average ?? '--'}</b>
+            <b>{stats.average !== null ? <Count value={stats.average} fromZero /> : '--'}</b>
             <small>MIN AVG</small>
           </div>
           <span className="crowd-label">{stats.crowd}</span>

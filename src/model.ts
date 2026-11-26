@@ -47,6 +47,8 @@ export function statusLabel(status: string): string {
       return 'DOWN';
     case 'REFURBISHMENT':
       return 'REFURB';
+    case 'PIN':
+      return 'YOUR PIN';
     case 'CLOSED':
       return 'CLOSED';
     default:
@@ -198,4 +200,46 @@ export function hoursLabel(hours: Hours | null, now: number): {head: string; det
   if (now >= hours.close) return {head: 'PARK CLOSED', detail: `SINCE ${clock(hours.close)}`, closing: true};
   const left = Math.round((hours.close - now) / 60000);
   return {head: `OPEN UNTIL ${clock(hours.close)}`, detail: `${duration(left)} LEFT`, closing: left <= 60};
+}
+
+export type Pin = {lat: number; lon: number; at: number};
+export const PIN_ID = 'pin';
+
+/** A dropped waypoint dressed as a ride, so the radar, sight, map and target views can show it. */
+export function pinRow(pin: Pin, geo: Geo, origin: Origin): Row {
+  const range = distanceM(origin.lat, origin.lon, pin.lat, pin.lon);
+  return {
+    id: PIN_ID,
+    name: 'My Pin',
+    status: 'PIN',
+    wait: null,
+    single: null,
+    pass: null,
+    lat: pin.lat,
+    lon: pin.lon,
+    land: `DROPPED ${clock(pin.at)}`,
+    distance: geo.lat !== null && geo.lon !== null ? distanceM(geo.lat, geo.lon, pin.lat, pin.lon) : null,
+    range,
+    bearing: bearingDeg(origin.lat, origin.lon, pin.lat, pin.lon),
+    walk: walkMinutes(range),
+    trend: null,
+    delta: 0,
+    peak: null,
+  };
+}
+
+/** Short news items for the footer ticker: what changed, what is down, what is next. */
+export function headlines(rows: Row[], shows: Show[], hours: {head: string; detail: string} | null): string[] {
+  const items: string[] = [];
+  const open = rows.filter(row => row.status === 'OPERATING' && row.wait !== null);
+  const falling = [...open].filter(row => row.trend === 'down').sort((a, b) => a.delta - b.delta)[0];
+  const rising = [...open].filter(row => row.trend === 'up').sort((a, b) => b.delta - a.delta)[0];
+  if (falling) items.push(`${falling.name} FALLING ${Math.abs(falling.delta)} MIN`);
+  if (rising) items.push(`${rising.name} RISING ${rising.delta} MIN`);
+  const longest = [...open].sort((a, b) => b.wait! - a.wait!)[0];
+  if (longest) items.push(`LONGEST WAIT ${longest.name} ${longest.wait} MIN`);
+  for (const row of rows.filter(row => row.status === 'DOWN').slice(0, 2)) items.push(`${row.name} IS DOWN`);
+  if (shows[0]) items.push(`${shows[0].name} ${shows[0].minutes < 1 ? 'STARTING NOW' : `IN ${shows[0].minutes} MIN`}`);
+  if (hours) items.push(`${hours.head}  ${hours.detail}`);
+  return items;
 }

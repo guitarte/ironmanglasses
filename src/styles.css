@@ -357,6 +357,7 @@ button:focus {
 }
 
 .row {
+  position: relative;
   height: 60px;
 }
 
@@ -954,7 +955,7 @@ button:focus {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 48px;
+  height: 40px;
   padding: 0 12px;
   border: 2px solid var(--c-dim);
   font-size: 16px;
@@ -1243,6 +1244,7 @@ button:focus {
 .target-actions {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
+  position: relative;
   gap: 8px;
   padding-top: 8px;
   border-top: 2px solid var(--c-dim);
@@ -2091,4 +2093,554 @@ html:not([data-display='glasses']) .contact-hint::before {
   font-weight: 600;
   letter-spacing: 0.2em;
   color: var(--c-dim);
+}
+
+/* ---- Livelier frame -------------------------------------------------------- */
+.rail {
+  position: absolute;
+  top: 70px;
+  bottom: 40px;
+  width: 7px;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, var(--c-dim) 0 2px, transparent 2px 12px);
+  opacity: 0.75;
+}
+
+.rail-left {
+  left: 5px;
+}
+
+.rail-right {
+  right: 5px;
+}
+
+.rail b {
+  position: absolute;
+  left: -1px;
+  width: 9px;
+  height: 14px;
+  margin-top: -7px;
+  background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+  transition: top 0.2s ease-out;
+}
+
+.rail-right b {
+  height: 26px;
+  opacity: 0.8;
+  animation: rail-run 5s cubic-bezier(0.5, 0, 0.5, 1) infinite alternate;
+}
+
+.sync-ring {
+  width: 15px;
+  height: 15px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  transform: rotate(-90deg);
+}
+
+.sync-ring circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-dasharray: 100 100;
+  animation: drain 30s linear forwards;
+}
+
+.link.is-busy .sync-ring {
+  animation: spin 0.9s linear infinite;
+}
+
+.link.is-busy .sync-ring circle {
+  stroke-dasharray: 30 100;
+  animation: none;
+}
+
+.meter {
+  position: absolute;
+  left: 12px;
+  bottom: 1px;
+  max-width: 330px;
+  height: 3px;
+  background: repeating-linear-gradient(90deg, var(--tone) 0 9px, transparent 9px 12px);
+  opacity: 0.85;
+  transform-origin: 0 50%;
+  animation: meter-in 0.5s ease-out both;
+}
+
+.ticker {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.ticker-run {
+  display: inline-block;
+  padding-left: 100%;
+  color: var(--c);
+  animation: ticker linear infinite;
+}
+
+.ticker-run span + span::before {
+  content: '   \25C6   ';
+  color: var(--c-dim);
+}
+
+/* The selected control breathes so it is easy to find at a glance. */
+.park:focus,
+.sort:focus,
+.row:focus,
+.move:focus,
+.contact:focus,
+.toggle:focus,
+.action:focus,
+.sight-contact:focus {
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+.page.is-entering .row:focus,
+.page.is-entering .move:focus,
+.page.is-entering .toggle:focus {
+  animation: cascade 0.36s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+/* ---- Gaze lock and glance mode ------------------------------------------------ */
+.sight-view .dwell {
+  fill: none;
+  stroke: var(--white);
+  stroke-width: 3;
+  stroke-dasharray: 0 100;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(-90deg);
+  animation: dwell 2.6s linear forwards;
+}
+
+.hud.target > *,
+.hud.target .gauge,
+.hud.target .scope {
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.hud.target.is-glance > :not(.scope):not(.turn),
+.hud.target.is-glance .gauge {
+  opacity: 0;
+}
+
+.hud.target.is-glance::before,
+.hud.target.is-glance::after {
+  opacity: 0;
+}
+
+.hud.target.is-glance .scope {
+  transform: translateY(118px) scale(0.5);
+}
+
+.hud.target.is-glance .turn {
+  transform: translateY(48px);
+}
+
+@keyframes rail-run {
+  from {
+    top: 4%;
+  }
+  to {
+    top: 96%;
+  }
+}
+
+@keyframes drain {
+  to {
+    stroke-dasharray: 0 100;
+  }
+}
+
+@keyframes meter-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes breathe {
+  50% {
+    box-shadow: inset 0 0 30px var(--c-glow), 0 0 10px var(--c-glow);
+  }
+}
+
+@keyframes dwell {
+  to {
+    stroke-dasharray: 100 100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-run {
+    padding-left: 0;
+  }
+
+  .sync-ring circle {
+    stroke-dasharray: 100 100;
+  }
+
+  .sight-view .dwell {
+    stroke-dasharray: 100 100;
+  }
+}
+
+/* ---- Flight mode ----------------------------------------------------------- */
+.hud.flight {
+  animation: iris 0.55s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+.flight-status {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--white);
+}
+
+.is-live .flight-status {
+  color: var(--hot, var(--amber));
+}
+
+.is-complete .flight-status {
+  color: var(--green);
+}
+
+.flight-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.g-meter {
+  flex: none;
+  width: 124px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--tone);
+}
+
+.g-meter b {
+  font-size: 50px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.g-note {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--c-dim);
+  white-space: pre;
+}
+
+.g-bar {
+  position: relative;
+  width: 26px;
+  height: 150px;
+  border: 2px solid var(--c-dim);
+}
+
+.g-bar i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--tone);
+}
+
+.g-bar u {
+  position: absolute;
+  left: -7px;
+  right: -7px;
+  height: 3px;
+  background: var(--white);
+}
+
+.g-bar s {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  height: 2px;
+  background: var(--c-dim);
+}
+
+.horizon-ball {
+  flex: 1;
+  min-width: 0;
+  height: 310px;
+}
+
+.horizon-ball line,
+.horizon-ball path,
+.horizon-ball circle {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2.5;
+}
+
+.horizon-ball .ground {
+  fill: var(--c-faint);
+}
+
+.horizon-ball .sky-line {
+  stroke: var(--white);
+  stroke-width: 3;
+}
+
+.horizon-ball .ladder line {
+  stroke: var(--c-dim);
+}
+
+.horizon-ball .ladder text {
+  fill: var(--c-dim);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.horizon-ball .roll-scale line {
+  stroke: var(--c-dim);
+}
+
+.horizon-ball .roll-pointer {
+  fill: var(--hot, var(--amber));
+  stroke: none;
+}
+
+.horizon-ball .wings {
+  stroke: var(--hot, var(--amber));
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.flight-trace {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 4px 8px;
+}
+
+.flight-trace svg {
+  width: 100%;
+  height: 46px;
+}
+
+.flight-trace polyline {
+  fill: none;
+  stroke: var(--hot, var(--amber));
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.flight-trace .one-g {
+  stroke: var(--c-dim);
+  stroke-dasharray: 3 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.flight-actions {
+  grid-template-columns: 1fr;
+}
+
+/* ---- Ride displays: instruments and per-ride backdrops ------------------------ */
+.hud.flight > :not(.flight-backdrop) {
+  position: relative;
+}
+
+.flight-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.is-armed .flight-backdrop {
+  opacity: 0.25;
+  animation-play-state: paused;
+}
+
+/* Star streaks rushing past. */
+.ride-starflight .flight-backdrop {
+  background:
+    radial-gradient(circle at 12% 30%, var(--c) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 82% 22%, var(--c) 0 1px, transparent 2px),
+    radial-gradient(circle at 64% 78%, var(--c) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 28% 86%, var(--c) 0 1px, transparent 2px),
+    radial-gradient(circle at 92% 62%, var(--c) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 6% 66%, var(--c) 0 1px, transparent 2px);
+  background-size: 300px 300px;
+  animation: stars 1.6s linear infinite;
+}
+
+/* Timber shoring down both sides. */
+.ride-minetrain .flight-backdrop {
+  background:
+    repeating-linear-gradient(180deg, var(--c-dim) 0 3px, transparent 3px 46px) left / 12px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--c-dim) 0 3px, transparent 3px 46px) right / 12px 100% no-repeat;
+  animation: timber 0.5s linear infinite;
+}
+
+/* Driving snow. */
+.ride-alpine .flight-backdrop {
+  background: repeating-linear-gradient(115deg, transparent 0 38px, var(--c-faint) 38px 40px);
+  background-size: 200% 200%;
+  animation: snow 1.2s linear infinite;
+}
+
+/* Speed lines. */
+.ride-launch .flight-backdrop,
+.ride-raceday .flight-backdrop {
+  background:
+    repeating-linear-gradient(90deg, var(--c-dim) 0 26px, transparent 26px 60px) top / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, var(--c-dim) 0 26px, transparent 26px 60px) bottom / 100% 3px no-repeat;
+  animation: speed 0.35s linear infinite;
+}
+
+.ride-raceday .flight-backdrop {
+  background:
+    repeating-conic-gradient(var(--c-dim) 0 25%, transparent 0 50%) top / 16px 16px repeat-x,
+    repeating-conic-gradient(var(--c-dim) 0 25%, transparent 0 50%) bottom / 16px 16px repeat-x;
+}
+
+/* Shaft walls sliding by. */
+.ride-droptower .flight-backdrop,
+.ride-flume .flight-backdrop {
+  background:
+    repeating-linear-gradient(180deg, var(--c-dim) 0 2px, transparent 2px 30px) left / 20px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--c-dim) 0 2px, transparent 2px 30px) right / 20px 100% no-repeat;
+  animation: timber 0.8s linear infinite reverse;
+}
+
+/* Hatched survey-map border. */
+.ride-expedition .flight-backdrop,
+.ride-cockpit .flight-backdrop,
+.ride-darkride .flight-backdrop {
+  background:
+    repeating-linear-gradient(45deg, var(--c-dim) 0 2px, transparent 2px 12px) top / 100% 6px no-repeat,
+    repeating-linear-gradient(-45deg, var(--c-dim) 0 2px, transparent 2px 12px) bottom / 100% 6px no-repeat;
+}
+
+.drop-shaft .shaft {
+  fill: none;
+  stroke: var(--c-dim);
+}
+
+.drop-shaft .shaft-tick {
+  stroke: var(--c-dim);
+}
+
+.drop-shaft .float-line {
+  stroke: var(--hot);
+  stroke-dasharray: 6 6;
+}
+
+.drop-shaft .shaft-label,
+.drop-shaft .float-word {
+  fill: var(--hot);
+  stroke: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.drop-shaft .float-word {
+  font-size: 20px;
+  text-anchor: middle;
+}
+
+.drop-shaft .cab {
+  fill: var(--c-faint);
+  stroke: var(--c);
+  stroke-width: 3;
+}
+
+.drop-shaft .cab.is-floating {
+  fill: var(--hot);
+  stroke: var(--hot);
+}
+
+.drop-shaft .cab-mark {
+  stroke: var(--white);
+}
+
+.tremor .tremor-grid {
+  stroke: var(--c-dim);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.tremor .tremor-now {
+  fill: var(--c-faint);
+  stroke: var(--hot);
+  stroke-width: 4;
+}
+
+.tremor .tremor-peak {
+  stroke: var(--c);
+  stroke-dasharray: 4 6;
+}
+
+.tremor .tremor-read {
+  fill: var(--white);
+  stroke: none;
+  font-size: 34px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+@keyframes stars {
+  to {
+    background-position: 0 300px;
+  }
+}
+
+@keyframes timber {
+  to {
+    background-position: left 0 top 46px, right 0 top 46px;
+  }
+}
+
+@keyframes snow {
+  to {
+    background-position: -80px 80px;
+  }
+}
+
+@keyframes speed {
+  to {
+    background-position: -60px top, -60px bottom;
+  }
+}
+
+.flight .target-top {
+  min-width: 0;
+}
+
+.flight .target-top .eyebrow {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.flight .g-meter:last-child b {
+  color: var(--c);
 }

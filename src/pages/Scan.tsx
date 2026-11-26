@@ -1,3 +1,4 @@
+import {Count} from '../Count';
 import type {AlertRule} from '../App';
 import {cardinal, formatDistance} from '../geo';
 import {level, SORT_LABEL, statusLabel, type Row, type Sort, passLabel} from '../model';
@@ -79,6 +80,9 @@ export function Scan(props: Props) {
               onFocus={() => props.onFocusCursor(index + SCAN_HEAD)}
               onClick={() => props.onLock(row.id)}
             >
+              {row.status === 'OPERATING' && row.wait !== null ? (
+                <i className="meter" style={{width: `${Math.min(row.wait, 90) / 90 * 100}%`}} aria-hidden="true" />
+              ) : null}
               <span className="row-text">
                 <span className="row-name">{row.name}</span>
                 <span className="row-detail">
@@ -100,7 +104,9 @@ export function Scan(props: Props) {
               <span className="row-wait">
                 {row.status === 'OPERATING' && row.wait !== null ? (
                   <>
-                    <b>{row.wait}</b>
+                    <b>
+                      <Count value={row.wait} />
+                    </b>
                     <small>MIN</small>
                   </>
                 ) : (
